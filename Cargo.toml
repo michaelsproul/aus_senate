@@ -1,0 +1,7 @@
+[package]
+name = "aus_senate"
+version = "0.1.0"
+authors = ["Michael Sproul <micsproul@gmail.com>"]
+
+[dependencies]
+num = "0.1"
