@@ -2,7 +2,23 @@
 name = "aus_senate"
 version = "0.1.0"
 dependencies = [
+ "csv 0.14.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "num 0.1.32 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
+]
+
+[[package]]
+name = "byteorder"
+version = "0.3.13"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+
+[[package]]
+name = "csv"
+version = "0.14.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+dependencies = [
+ "byteorder 0.3.13 (registry+https://github.com/rust-lang/crates.io-index)",
+ "rustc-serialize 0.3.19 (registry+https://github.com/rust-lang/crates.io-index)",
 ]
 
 [[package]]

@@ -1,16 +1,10 @@
-extern crate num;
-
 #[macro_use]
-mod util;
-mod ballot;
-mod quota;
-mod voting;
-mod vote_map;
+extern crate aus_senate;
 
-use quota::*;
-use util::*;
-use ballot::*;
-use voting::*;
+use aus_senate::quota::*;
+use aus_senate::util::*;
+use aus_senate::ballot::*;
+use aus_senate::voting::*;
 
 fn main() {
     if let Err(e) = main_with_result() {

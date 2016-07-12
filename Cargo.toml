@@ -5,3 +5,5 @@ authors = ["Michael Sproul <micsproul@gmail.com>"]
 
 [dependencies]
 num = "0.1"
+csv = "0.14.4"
+rustc-serialize = "0.3.19"
