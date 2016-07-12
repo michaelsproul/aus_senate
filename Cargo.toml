@@ -2,6 +2,7 @@
 name = "aus_senate"
 version = "0.1.0"
 authors = ["Michael Sproul <micsproul@gmail.com>"]
+license = "GPL-3.0+"
 
 [dependencies]
 num = "0.1"
