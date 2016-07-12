@@ -27,10 +27,11 @@ fn main_with_result() -> Result<(), String> {
         // Major party 2
         Ballot::new(5000, vec![2, 1]),
         // Minor party
-        Ballot::new(2, vec![3, 1, 2]),
+        Ballot::new(1, vec![3, 1, 2]),
+        Ballot::new(1, vec![3])
     ];
 
-    let elected = try!(decide_election(&[1, 2, 3], ballots, 1));
+    let elected = try!(decide_election(&[1, 2, 3, 4], ballots, 1));
     println!("{:?}", elected);
 
     Ok(())
