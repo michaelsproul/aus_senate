@@ -12,8 +12,11 @@ use aus_senate::util::*;
 use aus_senate::ballot::*;
 use aus_senate::voting::*;
 
-/// Group voting ticket description. Maps ticket names (e.g. "A", to preference lists).
-type GVT = HashMap<String, Vec<CandidateId>>;
+/// Group voting ticket description. Maps states to ticket names to preference lists.
+type GVT = HashMap<String, HashMap<String, Vec<CandidateId>>>;
+
+/// Temporary preference map type mapping candidate IDs to preferences.
+type PrefMap = HashMap<CandidateId, u32>;
 
 /// Holy moley.
 #[derive(RustcDecodable, Debug)]
@@ -33,52 +36,40 @@ struct GVTRow {
     preference: u32
 }
 
-fn convert_pref_map_to_vec(pref_map: &mut HashMap<CandidateId, u32>) -> Vec<CandidateId> {
-    let mut temp: Vec<_> = pref_map.drain().collect();
+fn pref_to_vec(pref_map: PrefMap) -> Vec<CandidateId> {
+    let mut temp: Vec<_> = pref_map.into_iter().collect();
     temp.sort_by_key(|&(cand, pref)| pref);
     temp.into_iter().map(|(cand, pref)| cand).collect()
 }
 
-fn parse_gvt<R: Read>(input: R, state: String) -> Result<GVT, Box<Error>> {
-    let mut reader = csv::Reader::from_reader(input);
+// NOTE: This is a tad slow, but it beats mucking around with manual row groupings.
+fn parse_gvt<R: Read>(input: R) -> Result<GVT, Box<Error>> {
+    let mut data: HashMap<String, HashMap<String, PrefMap>> = HashMap::new();
 
-    let mut gvt = HashMap::new();
-    let mut current_ticket = None;
-    let mut current_ballot: HashMap<CandidateId, u32> = HashMap::new();
+    let mut reader = csv::Reader::from_reader(input);
 
     for result in reader.decode::<GVTRow>() {
         let row = try!(result);
-
-        if row.state != state {
-            continue;
-        }
-
-        if current_ticket.is_none() {
-            current_ticket = Some(row.owner_ticket.clone());
-        }
-
-        // If we're still reading records for the current ticket, add to the prefs map.
-        if &row.owner_ticket == current_ticket.as_ref().unwrap() {
-            current_ballot.insert(row.candidate_id, row.preference);
-        }
-        // Otherwise, emit the current preferences and start on a new one.
-        else {
-            let preferences = convert_pref_map_to_vec(&mut current_ballot);
-            gvt.insert(current_ticket.unwrap(), preferences); // YICK
-            current_ticket = Some(row.owner_ticket);
-            current_ballot.insert(row.candidate_id, row.preference);
-        }
+        let ticket_map = data.entry(row.state).or_insert_with(HashMap::new);
+        let pref_map = ticket_map.entry(row.owner_ticket).or_insert_with(HashMap::new);
+        pref_map.insert(row.candidate_id, row.preference);
     }
 
-    // FIXME: Don't forget the last ticket!
-
-    Ok(gvt)
+    // Convert inner preference maps into lists.
+    let mut result = HashMap::new();
+    for (state, ticket_map) in data {
+        let new_ticket_map = result.entry(state).or_insert_with(HashMap::new);
+        for (ticket, pref_map) in ticket_map {
+            new_ticket_map.insert(ticket, pref_to_vec(pref_map));
+        }
+    }
+    Ok(result)
 }
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     println!("{:?}", args);
     let f = File::open(&args[1]).unwrap();
-    let gvt = parse_gvt(f, "NSW".into()).unwrap();
-    println!("{:?}", gvt["AO"]);
+    let gvt = parse_gvt(f).unwrap();
+    println!("{:?}", gvt["NSW"]["AO"]);
 }
