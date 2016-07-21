@@ -6,9 +6,8 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::env;
 use std::error::Error;
-use std::io::{self, Read};
+use std::io::Read;
 
-use aus_senate::util::*;
 use aus_senate::ballot::*;
 use aus_senate::voting::*;
 
@@ -38,8 +37,12 @@ struct GVTRow {
 
 fn pref_to_vec(pref_map: PrefMap) -> Vec<CandidateId> {
     let mut temp: Vec<_> = pref_map.into_iter().collect();
-    temp.sort_by_key(|&(cand, pref)| pref);
-    temp.into_iter().map(|(cand, pref)| cand).collect()
+    temp.sort_by_key(|&(_, pref)| pref);
+    temp.into_iter().map(|(cand, _)| cand).collect()
+}
+
+fn get_candidate_list(gvt: &GVT) -> Vec<CandidateId> {
+    gvt["NSW"]["A"].clone()
 }
 
 // NOTE: This is a tad slow, but it beats mucking around with manual row groupings.
@@ -66,10 +69,72 @@ fn parse_gvt<R: Read>(input: R) -> Result<GVT, Box<Error>> {
     Ok(result)
 }
 
-fn main() {
+/// GVT usage parsing.
+#[derive(RustcDecodable, Debug)]
+struct GVTUsageRow {
+    state: String,
+    ticket: String,
+    group_ab: String,
+    group_name: String,
+    ticket_votes: u32,
+    ticket_percentage: String,
+    non_ticket_votes: String,
+    non_ticket_percentage: String,
+    total_votes: String
+}
+
+type GVTUsage = HashMap<String, HashMap<String, u32>>;
+
+fn parse_gvt_usage<R: Read>(input: R) -> Result<GVTUsage, Box<Error>> {
+    let mut gvt_usage = HashMap::new();
+
+    let mut reader = csv::Reader::from_reader(input);
+
+    for raw_row in reader.decode::<GVTUsageRow>() {
+        let row = try!(raw_row);
+        let ticket_map = gvt_usage.entry(row.state).or_insert_with(HashMap::new);
+        // Skip ungrouped candidates with 0 vote.
+        if &row.ticket == "UG" {
+            continue;
+        }
+        let prev = ticket_map.insert(row.ticket, row.ticket_votes);
+        assert!(prev.is_none());
+    }
+
+    Ok(gvt_usage)
+}
+
+fn main_with_result() -> Result<(), Box<Error>> {
     let args: Vec<String> = env::args().collect();
-    println!("{:?}", args);
-    let f = File::open(&args[1]).unwrap();
-    let gvt = parse_gvt(f).unwrap();
-    println!("{:?}", gvt["NSW"]["AO"]);
+
+    if args.len() != 4 {
+        println!("Usage: ./election2013 <gvt file> <gvt usage file> <state>");
+        try!(Err("invalid command line arguments.".to_string()));
+    }
+
+    let gvt_file_name = &args[1];
+    let gvt_usage_file_name = &args[2];
+    let state = &args[3];
+
+    let gvt_file = try!(File::open(gvt_file_name));
+    let gvt = try!(parse_gvt(gvt_file));
+    let gvt_usage_file = try!(File::open(gvt_usage_file_name));
+    let gvt_usage = try!(parse_gvt_usage(gvt_usage_file));
+
+    let candidates = get_candidate_list(&gvt);
+
+    // Construct the list of ballots according to the GVT.
+    let ballots = gvt_usage[state].iter().map(|(group, &vote_count)| {
+        Ballot::new(vote_count, gvt[state][group].clone())
+    }).collect();
+
+    println!("{:?}", decide_election(&candidates, ballots, 6));
+
+    Ok(())
+}
+
+fn main() {
+    if let Err(e) = main_with_result() {
+        println!("Error: {:?}", e);
+    }
 }

@@ -31,7 +31,7 @@ impl VoteMap {
     pub fn add(&mut self, ballot: Ballot) {
         let candidate = ballot.prefs[ballot.current];
         // Add to the candidate's tally.
-        let mut vote_count = self.tally.get_mut(&candidate).unwrap();
+        let mut vote_count = self.tally.get_mut(&candidate).expect(&format!("Candidate not found: {}", candidate));
         *vote_count = &*vote_count + &ballot.weight;
         // Add the ballot to the candidate's bucket.
         let mut bucket = self.map.get_mut(&candidate).unwrap();
@@ -48,10 +48,19 @@ impl VoteMap {
         self.tally.iter().min_by_key(|&(_, v)| v).map(|(&c, _)| c).unwrap()
     }
 
+    pub fn find_next_valid_preference(&self, b: &Ballot) -> Option<usize> {
+        for (i, cand) in b.prefs[b.current .. ].iter().enumerate() {
+            if self.tally.get(cand).is_some() {
+                return Some(b.current + i);
+            }
+        }
+        None
+    }
+
     /// Redistribute the votes for the given candidate.
     /// Transfer value should be 1 if the candidate is being knocked out,
     /// or the (vote - quota) / (quota) if the candidate has been elected.
-    fn redistribute_votes(&mut self, candidate: CandidateId, transfer_value: Frac)
+    fn redistribute_votes(&mut self, candidate: CandidateId, transfer_value: &Frac)
     -> Vec<Ballot>
     {
         let ballots = self.map.remove(&candidate).unwrap();
@@ -60,12 +69,15 @@ impl VoteMap {
         let mut exhausted_ballots = vec![];
 
         for mut ballot in ballots {
-            if ballot.is_exhausted() {
-                exhausted_ballots.push(ballot);
-            } else {
-                ballot.weight = ballot.weight * &transfer_value;
-                ballot.current += 1;
-                self.add(ballot);
+            match self.find_next_valid_preference(&ballot) {
+                Some(i) => {
+                    ballot.current = i;
+                    ballot.weight = ballot.weight.clone() * transfer_value;
+                    self.add(ballot);
+                }
+                None => {
+                    exhausted_ballots.push(ballot);
+                }
             }
         }
 
@@ -75,12 +87,13 @@ impl VoteMap {
     pub fn elect_candidate(&mut self, candidate: CandidateId, quota: &Frac) -> Vec<Ballot> {
         let transfer_value = {
             let num_votes = &self.tally[&candidate];
-            (num_votes - quota) / quota
+            (num_votes - quota) / num_votes
         };
-        self.redistribute_votes(candidate, transfer_value)
+        println!("Transferring at value: {}", transfer_value);
+        self.redistribute_votes(candidate, &transfer_value)
     }
 
     pub fn knock_out_candidate(&mut self, candidate: CandidateId) -> Vec<Ballot> {
-        self.redistribute_votes(candidate, frac!(1))
+        self.redistribute_votes(candidate, &frac!(1))
     }
 }

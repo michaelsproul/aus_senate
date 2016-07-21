@@ -20,6 +20,7 @@ pub enum Senate {
 pub fn decide_election(candidates: &[CandidateId], ballots: Vec<Ballot>, num_candidates: u32) -> Result<Senate, String> {
     let num_votes = compute_num_votes(&ballots);
     let quota = senate_quota(num_votes, num_candidates);
+    println!("Senate quota is: {}", quota);
 
     // TODO: Sanity check for all preferences (to make various unwraps safe).
 
@@ -38,6 +39,7 @@ pub fn decide_election(candidates: &[CandidateId], ballots: Vec<Ballot>, num_can
 
     // Stage 1: Elect all candidates with a full quota.
     while let Some(candidate) = vote_map.get_candidate_with_quota(&quota) {
+        println!("Elected candidate {} in the first round of voting", candidate);
         elected_candidates.push(candidate);
         let mut exhausted = vote_map.elect_candidate(candidate, &quota);
         exhausted_votes.append(&mut exhausted);
@@ -64,11 +66,13 @@ pub fn decide_election(candidates: &[CandidateId], ballots: Vec<Ballot>, num_can
         }
 
         let last_candidate = vote_map.get_last_candidate();
+        println!("Eliminating candidate: {}, candidates remaining: {}", last_candidate, vote_map.tally.len());
         let mut ex = vote_map.knock_out_candidate(last_candidate);
         exhausted_votes.append(&mut ex);
 
         // If there is now a candidate with a full quota, elect them!
         if let Some(candidate) = vote_map.get_candidate_with_quota(&quota) {
+            println!("Electing candidate: {}", candidate);
             elected_candidates.push(candidate);
             let mut ex = vote_map.elect_candidate(candidate, &quota);
             exhausted_votes.append(&mut ex);

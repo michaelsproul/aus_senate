@@ -4,6 +4,7 @@ use util::*;
 pub type CandidateId = u32;
 
 /// A Ballot represents an individual's order of preferences.
+#[derive(Debug)]
 pub struct Ballot {
     /// Ballot weight, initially the number of people who voted this way.
     pub weight: Frac,
