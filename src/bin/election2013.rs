@@ -3,13 +3,13 @@ extern crate csv;
 extern crate rustc_serialize;
 
 use std::collections::HashMap;
-use std::fs::File;
 use std::env;
 use std::error::Error;
 use std::io::Read;
 
 use aus_senate::ballot::*;
 use aus_senate::voting::*;
+use aus_senate::util::*;
 
 /// Group voting ticket description. Maps states to ticket names to preference lists.
 type GVT = HashMap<String, HashMap<String, Vec<CandidateId>>>;
@@ -116,9 +116,9 @@ fn main_with_result() -> Result<(), Box<Error>> {
     let gvt_usage_file_name = &args[2];
     let state = &args[3];
 
-    let gvt_file = try!(File::open(gvt_file_name));
+    let gvt_file = try!(open_aec_csv(gvt_file_name));
     let gvt = try!(parse_gvt(gvt_file));
-    let gvt_usage_file = try!(File::open(gvt_usage_file_name));
+    let gvt_usage_file = try!(open_aec_csv(gvt_usage_file_name));
     let gvt_usage = try!(parse_gvt_usage(gvt_usage_file));
 
     let candidates = get_candidate_list(&gvt);
