@@ -2,7 +2,7 @@
 extern crate csv;
 extern crate rustc_serialize;
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::error::Error;
 use std::io::Read;
@@ -16,6 +16,9 @@ type GVT = HashMap<String, HashMap<String, Vec<CandidateId>>>;
 
 /// Temporary preference map type mapping candidate IDs to preferences.
 type PrefMap = HashMap<CandidateId, u32>;
+
+/// Below the line voting map. Maps (batch, paper) pairs to preferences.
+type BelowTheLine = HashMap<(u32, u32), PrefMap>;
 
 /// Holy moley.
 #[derive(RustcDecodable, Debug)]
@@ -104,29 +107,78 @@ fn parse_gvt_usage<R: Read>(input: R) -> Result<GVTUsage, Box<Error>> {
     Ok(gvt_usage)
 }
 
+
+#[derive(RustcDecodable, Debug)]
+struct BTLRow {
+    candidate_id: u32,
+    preference: Option<u32>,
+    batch: u32,
+    paper: u32
+}
+
+fn parse_btl_votes<R: Read>(input: R) -> Result<BelowTheLine, Box<Error>> {
+    let mut btl_votes = HashMap::new();
+    let mut invalid_votes = HashSet::new();
+    let mut reader = csv::Reader::from_reader(input);
+
+    for raw_row in reader.decode::<BTLRow>() {
+        let row = try!(raw_row);
+        let vote_id = (row.batch, row.paper);
+        match row.preference {
+            Some(pref) => {
+                let voter_prefs = btl_votes.entry(vote_id).or_insert_with(HashMap::new);
+                let prev = voter_prefs.insert(row.candidate_id, pref);
+                assert!(prev.is_none());
+            }
+            None => {
+                invalid_votes.insert(vote_id);
+            }
+        }
+    }
+
+    // Remove invalid votes.
+    println!("Invalid BTL votes: {}", invalid_votes.len());
+    for vote_id in invalid_votes {
+        btl_votes.remove(&vote_id);
+    }
+    println!("Valid BTL votes: {}", btl_votes.len());
+
+    Ok(btl_votes)
+}
+
 fn main_with_result() -> Result<(), Box<Error>> {
     let args: Vec<String> = env::args().collect();
 
-    if args.len() != 4 {
-        println!("Usage: ./election2013 <gvt file> <gvt usage file> <state>");
+    if args.len() != 5 {
+        println!("Usage: ./election2013 <gvt file> <gvt usage file> <btl votes> <state>");
         try!(Err("invalid command line arguments.".to_string()));
     }
 
     let gvt_file_name = &args[1];
     let gvt_usage_file_name = &args[2];
-    let state = &args[3];
+    let btl_file_name = &args[3];
+    let state = &args[4];
 
     let gvt_file = try!(open_aec_csv(gvt_file_name));
     let gvt = try!(parse_gvt(gvt_file));
     let gvt_usage_file = try!(open_aec_csv(gvt_usage_file_name));
     let gvt_usage = try!(parse_gvt_usage(gvt_usage_file));
 
+    let btl_file = try!(open_aec_csv(btl_file_name));
+    let btl_votes = try!(parse_btl_votes(btl_file));
+
     let candidates = get_candidate_list(&gvt);
 
-    // Construct the list of ballots according to the GVT.
-    let ballots = gvt_usage[state].iter().map(|(group, &vote_count)| {
+    // Construct the initial list of ballots according to the GVT.
+    let mut ballots: Vec<Ballot> = gvt_usage[state].iter().map(|(group, &vote_count)| {
         Ballot::new(vote_count, gvt[state][group].clone())
     }).collect();
+
+    // Then extend it with the below the line votes.
+    // TODO: Dedupe below the line ballots.
+    ballots.extend(btl_votes.into_iter().map(|(_, pref_map)| {
+        Ballot::new(1, pref_to_vec(pref_map))
+    }));
 
     println!("{:?}", decide_election(&candidates, ballots, 6));
 
