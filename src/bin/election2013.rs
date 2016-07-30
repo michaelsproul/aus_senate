@@ -44,8 +44,8 @@ fn pref_to_vec(pref_map: PrefMap) -> Vec<CandidateId> {
     temp.into_iter().map(|(cand, _)| cand).collect()
 }
 
-fn get_candidate_list(gvt: &GVT) -> Vec<CandidateId> {
-    gvt["NSW"]["A"].clone()
+fn get_candidate_list(gvt: &GVT, state: &str) -> Vec<CandidateId> {
+    gvt[state]["A"].clone()
 }
 
 // NOTE: This is a tad slow, but it beats mucking around with manual row groupings.
@@ -146,6 +146,18 @@ fn parse_btl_votes<R: Read>(input: R) -> Result<BelowTheLine, Box<Error>> {
     Ok(btl_votes)
 }
 
+fn create_gvt_ballot_list(gvt: &GVT, gvt_usage: &GVTUsage, state: &str) -> Vec<Ballot> {
+    gvt_usage[state]
+        .iter()
+        // If the vote count is 0, then we can safely skip adding this bit of GVT usage.
+        // The AEC files are strange in that some groups are included in the GVT usage with
+        // with a count of 0, but absent are from the actual GVT description.
+        .filter(|&(_, &vote_count)| vote_count != 0)
+        // We then create a ballot with the right list of preferences from the GVT description.
+        .map(|(group, &vote_count)| Ballot::new(vote_count, gvt[state][group].clone()))
+        .collect()
+}
+
 fn main_with_result() -> Result<(), Box<Error>> {
     let args: Vec<String> = env::args().collect();
 
@@ -167,12 +179,10 @@ fn main_with_result() -> Result<(), Box<Error>> {
     let btl_file = try!(open_aec_csv(btl_file_name));
     let btl_votes = try!(parse_btl_votes(btl_file));
 
-    let candidates = get_candidate_list(&gvt);
+    let candidates = get_candidate_list(&gvt, state);
 
     // Construct the initial list of ballots according to the GVT.
-    let mut ballots: Vec<Ballot> = gvt_usage[state].iter().map(|(group, &vote_count)| {
-        Ballot::new(vote_count, gvt[state][group].clone())
-    }).collect();
+    let mut ballots = create_gvt_ballot_list(&gvt, &gvt_usage, state);
 
     // Then extend it with the below the line votes.
     // TODO: Dedupe below the line ballots.
