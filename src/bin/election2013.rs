@@ -14,9 +14,6 @@ use aus_senate::util::*;
 /// Group voting ticket description. Maps states to ticket names to preference lists.
 type GVT = HashMap<String, HashMap<String, Vec<CandidateId>>>;
 
-/// Temporary preference map type mapping candidate IDs to preferences.
-type PrefMap = HashMap<CandidateId, u32>;
-
 /// Below the line voting map. Maps (batch, paper) pairs to preferences.
 type BelowTheLine = HashMap<(u32, u32), PrefMap>;
 
@@ -36,12 +33,6 @@ struct GVTRow {
     party_ab: String,
     party_name: String,
     preference: u32
-}
-
-fn pref_to_vec(pref_map: PrefMap) -> Vec<CandidateId> {
-    let mut temp: Vec<_> = pref_map.into_iter().collect();
-    temp.sort_by_key(|&(_, pref)| pref);
-    temp.into_iter().map(|(cand, _)| cand).collect()
 }
 
 fn get_candidate_list(gvt: &GVT, state: &str) -> Vec<CandidateId> {
@@ -66,7 +57,7 @@ fn parse_gvt<R: Read>(input: R) -> Result<GVT, Box<Error>> {
     for (state, ticket_map) in data {
         let new_ticket_map = result.entry(state).or_insert_with(HashMap::new);
         for (ticket, pref_map) in ticket_map {
-            new_ticket_map.insert(ticket, pref_to_vec(pref_map));
+            new_ticket_map.insert(ticket, pref_map_to_vec(pref_map));
         }
     }
     Ok(result)
@@ -187,7 +178,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
     // Then extend it with the below the line votes.
     // TODO: Dedupe below the line ballots.
     ballots.extend(btl_votes.into_iter().map(|(_, pref_map)| {
-        Ballot::new(1, pref_to_vec(pref_map))
+        Ballot::new(1, pref_map_to_vec(pref_map))
     }));
 
     println!("{:?}", decide_election(&candidates, ballots, 6));

@@ -5,7 +5,7 @@ use util::*;
 use quota::*;
 use vote_map::*;
 
-use self::Senate::*;
+pub use self::Senate::*;
 
 pub fn compute_num_votes(ballots: &[Ballot]) -> Frac {
     ballots.iter().fold(frac!(0), |acc, b| acc + &b.weight)

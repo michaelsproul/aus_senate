@@ -5,6 +5,8 @@ extern crate rustc_serialize;
 use std::error::Error;
 use std::io::Read;
 use std::env;
+use std::fs::File;
+use std::collections::HashMap;
 
 use aus_senate::ballot::*;
 use aus_senate::voting::*;
@@ -45,6 +47,7 @@ pub struct Candidate {
     state: String,
     surname: String,
     other_names: String,
+    group_name: String,
     party: String,
 }
 
@@ -54,11 +57,15 @@ fn parse_candidates_file<R: Read>(input: R) -> Result<Vec<Candidate>, Box<Error>
 
     for (id, raw_row) in reader.decode::<CandidateRow>().enumerate() {
         let row = try!(raw_row);
+        if row.nom_ty != "S" {
+            continue;
+        }
         result.push(Candidate {
             id: id as u32,
             state: row.state_ab,
             surname: row.surname,
             other_names: row.other_names,
+            group_name: row.ticket,
             party: row.party,
         });
     }
@@ -66,21 +73,171 @@ fn parse_candidates_file<R: Read>(input: R) -> Result<Vec<Candidate>, Box<Error>
     Ok(result)
 }
 
+fn get_candidate_id_list(candidates: &[Candidate], state: &String) -> Vec<CandidateId> {
+    candidates.iter()
+        .filter(|c| &c.state == state)
+        .map(|c| c.id)
+        .collect()
+}
+
+#[derive(Debug)]
+struct Group {
+    name: String,
+    candidate_ids: Vec<CandidateId>
+}
+
+fn get_group_list(candidates: &[Candidate], state: &String) -> Vec<Group> {
+    let mut groups: Vec<Group> = vec![];
+    for c in candidates.iter().filter(|c| &c.state == state) {
+        // If there's already a group for this candidate, add them and continue.
+        if let Some(current_group) = groups.last_mut() {
+            if current_group.name == c.group_name {
+                current_group.candidate_ids.push(c.id);
+                continue;
+            }
+        }
+        // Otherwise, push a new group to the list (skipping the ungrouped group).
+        if c.group_name != "UG" {
+            groups.push(Group { name: c.group_name.clone(), candidate_ids: vec![c.id] });
+        }
+    }
+    groups
+}
+
+#[derive(RustcDecodable, Debug)]
+struct PrefRow {
+    electorate_name: String,
+    vote_collection_point: String,
+    vote_collection_point_id: String,
+    batch_num: String,
+    paper_num: String,
+    preferences: String,
+}
+
+fn ballot_below_the_line(raw_prefs: Vec<&str>, candidates: &[CandidateId]) -> Result<Ballot, Box<Error>> {
+    let mut pref_map = HashMap::new();
+
+    for (idx, pref) in raw_prefs.iter().enumerate() {
+        if pref.is_empty() {
+            continue;
+        }
+        let pref_int = try!(pref.parse::<u32>());
+        pref_map.insert(candidates[idx], pref_int);
+    }
+    let prefs = pref_map_to_vec(pref_map);
+    Ok(Ballot::new(1, prefs))
+}
+
+// FIXME: this is a bit of a mess.
+fn ballot_above_the_line(raw_prefs: Vec<&str>, groups: &[Group]) -> Result<Ballot, Box<Error>> {
+    let mut pref_map = HashMap::new();
+
+    for (group_idx, pref) in raw_prefs.iter().enumerate() {
+        if pref.is_empty() {
+            continue;
+        }
+        let pref_int = try!(pref.parse::<u32>());
+        pref_map.insert(pref_int, &groups[group_idx].candidate_ids);
+    }
+
+    let mut flat_pref_map: Vec<_> = pref_map.into_iter().collect();
+    flat_pref_map.sort_by_key(|&(pref, _)| pref);
+    let mut prefs = vec![];
+    for (_, group_candidates) in flat_pref_map {
+        prefs.extend_from_slice(group_candidates);
+    }
+    Ok(Ballot::new(1, prefs))
+}
+
+// Convert a preferences string to a ballot.
+fn pref_string_to_ballot(pref_string: &str, groups: &[Group], candidates: &[CandidateId])
+    -> Result<Ballot, Box<Error>>
+{
+    // Split the preference string into above and below the line sections.
+    //println!("Pref string: {}", pref_string);
+    //println!("Groups: {:?}", groups);
+    let mut above_the_line: Vec<&str> = pref_string.split(',').collect();
+    let below_the_line = above_the_line.split_off(groups.len());
+
+    // A preference is valid if any of the comma separated values are non-empty.
+    let is_valid = |prefs: &[&str]| prefs.iter().any(|s| !s.is_empty());
+
+    match (is_valid(&above_the_line), is_valid(&below_the_line)) {
+        (true, false) => ballot_above_the_line(above_the_line, groups),
+        (false, true) => ballot_below_the_line(below_the_line, candidates),
+        (true, true) => try!(Err("Both are valid")),
+        (false, false) => try!(Err("Empty vote")),
+    }
+}
+
+fn parse_preferences_file<R: Read>(input: R, groups: &[Group], candidates: &[CandidateId]) -> Result<Vec<Ballot>, Box<Error>> {
+    let mut ballots = vec![];
+    let mut reader = csv::Reader::from_reader(input);
+
+    let mut num_total_ballots = 0;
+    let mut num_invalid_ballots = 0;
+
+    for raw_row in reader.decode::<PrefRow>() {
+        let row = try!(raw_row);
+        num_total_ballots += 1;
+        match pref_string_to_ballot(&row.preferences, groups, candidates) {
+            Ok(b) => {
+                ballots.push(b);
+            }
+            Err(_) => {
+                num_invalid_ballots += 1;
+            }
+        }
+    }
+    println!("Invalid ballots: {}/{}", num_invalid_ballots, num_total_ballots);
+
+    Ok(ballots)
+}
+
+
 fn main_with_result() -> Result<(), Box<Error>> {
     let args: Vec<String> = env::args().collect();
 
-    if args.len() != 3 {
-        println!("Usage: ./election2016 <candidates file> <state>");
+    if args.len() != 4 {
+        println!("Usage: ./election2016 <candidates file> <prefs file> <state>");
         try!(Err("invalid command line arguments.".to_string()));
     }
 
     let candidates_file_name = &args[1];
-    let state = &args[2];
+    let prefs_file_name = &args[2];
+    let state = &args[3];
 
-    let candidates_file = try!(open_aec_csv(candidates_file_name));
+    let candidates_file = try!(File::open(candidates_file_name));
     let all_candidates = try!(parse_candidates_file(candidates_file));
 
-    println!("{:?}", all_candidates.into_iter().filter(|c| &c.state == state).collect::<Vec<_>>());
+    for c in all_candidates.iter() {
+        println!("{}: {} {} ({})", c.id, c.other_names, c.surname, c.party);
+    }
+
+    // Extract candidate and group information from the complete list of ballots.
+    let candidate_ids = get_candidate_id_list(&all_candidates, state);
+    let groups = get_group_list(&all_candidates, state);
+
+    let prefs_file = try!(open_aec_csv(prefs_file_name));
+    let ballots = try!(parse_preferences_file(prefs_file, &groups, &candidate_ids));
+
+    println!("Num ballots: {}", ballots.len());
+
+    let election_result = try!(decide_election(&candidate_ids, ballots, 12));
+
+    let elected_ids = match election_result {
+        Regular(ids) => ids,
+        Tied(ids, _, _) => { println!("Tie!"); ids }
+    };
+
+    for id in elected_ids {
+        for c in all_candidates.iter() {
+            if c.id == id {
+                println!("Elected: {} {} ({})", c.other_names, c.surname, c.party);
+            }
+        }
+    }
+
 
     Ok(())
 }
