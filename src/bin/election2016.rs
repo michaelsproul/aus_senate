@@ -114,7 +114,7 @@ struct PrefRow {
     preferences: String,
 }
 
-fn ballot_below_the_line(raw_prefs: Vec<&str>, candidates: &[CandidateId]) -> Result<Ballot, Box<Error>> {
+fn ballot_below_the_line(raw_prefs: Vec<&str>, candidates: &[CandidateId]) -> Result<Vec<CandidateId>, Box<Error>> {
     let mut pref_map = HashMap::new();
 
     for (idx, pref) in raw_prefs.iter().enumerate() {
@@ -125,11 +125,11 @@ fn ballot_below_the_line(raw_prefs: Vec<&str>, candidates: &[CandidateId]) -> Re
         pref_map.insert(candidates[idx], pref_int);
     }
     let prefs = pref_map_to_vec(pref_map);
-    Ok(Ballot::new(1, prefs))
+    Ok(prefs)
 }
 
 // FIXME: this is a bit of a mess.
-fn ballot_above_the_line(raw_prefs: Vec<&str>, groups: &[Group]) -> Result<Ballot, Box<Error>> {
+fn ballot_above_the_line(raw_prefs: Vec<&str>, groups: &[Group]) -> Result<Vec<CandidateId>, Box<Error>> {
     let mut pref_map = HashMap::new();
 
     for (group_idx, pref) in raw_prefs.iter().enumerate() {
@@ -146,12 +146,12 @@ fn ballot_above_the_line(raw_prefs: Vec<&str>, groups: &[Group]) -> Result<Ballo
     for (_, group_candidates) in flat_pref_map {
         prefs.extend_from_slice(group_candidates);
     }
-    Ok(Ballot::new(1, prefs))
+    Ok(prefs)
 }
 
 // Convert a preferences string to a ballot.
 fn pref_string_to_ballot(pref_string: &str, groups: &[Group], candidates: &[CandidateId])
-    -> Result<Ballot, Box<Error>>
+    -> Result<Vec<CandidateId>, Box<Error>>
 {
     // Split the preference string into above and below the line sections.
     //println!("Pref string: {}", pref_string);
@@ -171,18 +171,21 @@ fn pref_string_to_ballot(pref_string: &str, groups: &[Group], candidates: &[Cand
 }
 
 fn parse_preferences_file<R: Read>(input: R, groups: &[Group], candidates: &[CandidateId]) -> Result<Vec<Ballot>, Box<Error>> {
-    let mut ballots = vec![];
     let mut reader = csv::Reader::from_reader(input);
 
     let mut num_total_ballots = 0;
     let mut num_invalid_ballots = 0;
 
+    let mut uniq_prefs: HashMap<Vec<CandidateId>, u32> = HashMap::new();
+
     for raw_row in reader.decode::<PrefRow>() {
         let row = try!(raw_row);
         num_total_ballots += 1;
+
         match pref_string_to_ballot(&row.preferences, groups, candidates) {
-            Ok(b) => {
-                ballots.push(b);
+            Ok(prefs) => {
+                let count = uniq_prefs.entry(prefs).or_insert(0);
+                *count += 1;
             }
             Err(_) => {
                 num_invalid_ballots += 1;
@@ -190,10 +193,14 @@ fn parse_preferences_file<R: Read>(input: R, groups: &[Group], candidates: &[Can
         }
     }
     println!("Invalid ballots: {}/{}", num_invalid_ballots, num_total_ballots);
+    println!("Unique ballots: {}/{}", uniq_prefs.len(), num_total_ballots - num_invalid_ballots);
+
+    let ballots = uniq_prefs.into_iter().map(|(prefs, count)| {
+        Ballot::new(count, prefs)
+    }).collect();
 
     Ok(ballots)
 }
-
 
 fn main_with_result() -> Result<(), Box<Error>> {
     let args: Vec<String> = env::args().collect();
