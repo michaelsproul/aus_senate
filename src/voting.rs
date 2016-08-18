@@ -1,15 +1,10 @@
 use std::cmp::Ordering::*;
 
 use ballot::*;
-use util::*;
 use quota::*;
 use vote_map::*;
 
 pub use self::Senate::*;
-
-pub fn compute_num_votes(ballots: &[Ballot]) -> Frac {
-    ballots.iter().fold(frac!(0), |acc, b| acc + &b.weight)
-}
 
 #[derive(Debug)]
 pub enum Senate {
@@ -17,8 +12,7 @@ pub enum Senate {
     Tied(Vec<CandidateId>, CandidateId, CandidateId)
 }
 
-pub fn decide_election(candidates: &[CandidateId], ballots: Vec<Ballot>, num_candidates: u32) -> Result<Senate, String> {
-    let num_votes = compute_num_votes(&ballots);
+pub fn decide_election(candidates: &[CandidateId], ballots: Vec<Ballot>, num_votes: u32, num_candidates: u32) -> Result<Senate, String> {
     let quota = senate_quota(num_votes, num_candidates);
     println!("Senate quota is: {}", quota);
 

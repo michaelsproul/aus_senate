@@ -8,3 +8,6 @@ license = "GPL-3.0+"
 num = "0.1"
 csv = "0.14.4"
 rustc-serialize = "0.3.19"
+
+[profile.release]
+debug = true

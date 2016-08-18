@@ -149,6 +149,10 @@ fn create_gvt_ballot_list(gvt: &GVT, gvt_usage: &GVTUsage, state: &str) -> Vec<B
         .collect()
 }
 
+fn count_gvt_votes(gvt_usage: &GVTUsage, state: &str) -> u32 {
+    gvt_usage[state].iter().map(|(_, &vote_count)| vote_count).fold(0, |acc, c| acc + c)
+}
+
 fn main_with_result() -> Result<(), Box<Error>> {
     let args: Vec<String> = env::args().collect();
 
@@ -174,6 +178,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
 
     // Construct the initial list of ballots according to the GVT.
     let mut ballots = create_gvt_ballot_list(&gvt, &gvt_usage, state);
+    let num_votes = count_gvt_votes(&gvt_usage, state) + btl_votes.len() as u32;
 
     // Then extend it with the below the line votes.
     // TODO: Dedupe below the line ballots.
@@ -181,7 +186,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
         Ballot::new(1, pref_map_to_vec(pref_map))
     }));
 
-    println!("{:?}", decide_election(&candidates, ballots, 6));
+    println!("{:?}", decide_election(&candidates, ballots, num_votes, 6));
 
     Ok(())
 }

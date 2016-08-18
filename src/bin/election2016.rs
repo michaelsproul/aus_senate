@@ -170,7 +170,9 @@ fn pref_string_to_ballot(pref_string: &str, groups: &[Group], candidates: &[Cand
     }
 }
 
-fn parse_preferences_file<R: Read>(input: R, groups: &[Group], candidates: &[CandidateId]) -> Result<Vec<Ballot>, Box<Error>> {
+fn parse_preferences_file<R: Read>(input: R, groups: &[Group], candidates: &[CandidateId])
+    -> Result<(Vec<Ballot>, u32), Box<Error>>
+{
     let mut reader = csv::Reader::from_reader(input);
 
     let mut num_total_ballots = 0;
@@ -192,14 +194,15 @@ fn parse_preferences_file<R: Read>(input: R, groups: &[Group], candidates: &[Can
             }
         }
     }
+    let num_valid_votes = num_total_ballots - num_invalid_ballots;
     println!("Invalid ballots: {}/{}", num_invalid_ballots, num_total_ballots);
-    println!("Unique ballots: {}/{}", uniq_prefs.len(), num_total_ballots - num_invalid_ballots);
+    println!("Unique ballots: {}/{}", uniq_prefs.len(), num_valid_votes);
 
     let ballots = uniq_prefs.into_iter().map(|(prefs, count)| {
         Ballot::new(count, prefs)
     }).collect();
 
-    Ok(ballots)
+    Ok((ballots, num_valid_votes))
 }
 
 fn main_with_result() -> Result<(), Box<Error>> {
@@ -226,11 +229,11 @@ fn main_with_result() -> Result<(), Box<Error>> {
     let groups = get_group_list(&all_candidates, state);
 
     let prefs_file = try!(open_aec_csv(prefs_file_name));
-    let ballots = try!(parse_preferences_file(prefs_file, &groups, &candidate_ids));
+    let (ballots, num_votes) = try!(parse_preferences_file(prefs_file, &groups, &candidate_ids));
 
     println!("Num ballots: {}", ballots.len());
 
-    let election_result = try!(decide_election(&candidate_ids, ballots, 12));
+    let election_result = try!(decide_election(&candidate_ids, ballots, num_votes, 12));
 
     let elected_ids = match election_result {
         Regular(ids) => ids,
