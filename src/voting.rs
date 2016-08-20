@@ -43,8 +43,18 @@ pub fn decide_election(candidates: &[CandidateId], ballots: Vec<Ballot>, num_vot
     // candidates based on preferences, OR reached only two candidates.
     while elected_candidates.len() < num_candidates as usize {
         assert!(vote_map.tally.len() >= 2);
-        // If only two candidates remain, try to elect the one with the majority.
+        let positions_remaining = num_candidates as usize - elected_candidates.len();
+        // If there is some number of candidates still to be elected, and all other
+        // candidates have been eliminated, then elect all the remaining candidates.
+        if vote_map.tally.len() == positions_remaining {
+            elected_candidates.extend(vote_map.tally.drain().map(|(c, _)| c));
+            break;
+        }
+
+        // Otherwise, if there are 2 candidates remaining and only 1 left to be elected,
+        // try to elect the candidate with the majority.
         if vote_map.tally.len() == 2 {
+            assert_eq!(positions_remaining, 1);
             let last_two: Vec<_> = vote_map.tally.drain().collect();
             let (c1, ref v1) = last_two[0];
             let (c2, ref v2) = last_two[1];
