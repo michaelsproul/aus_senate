@@ -1,18 +1,11 @@
 use std::io::{self, BufRead, BufReader};
 use std::fs::File;
 
+pub use std::collections::HashMap;
 pub use num::rational::Ratio;
 pub use num::*;
 
-pub type Uint = BigUint;
-pub type Frac = Ratio<Uint>;
-
-#[macro_export]
-macro_rules! uint {
-    ($e:expr) => {
-        BigUint::from($e as u64)
-    }
-}
+pub type Frac = Ratio<BigUint>;
 
 #[macro_export]
 macro_rules! frac {

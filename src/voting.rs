@@ -1,19 +1,39 @@
 use std::cmp::Ordering::*;
 
+use util::*;
+use candidate::*;
 use ballot::*;
-use quota::*;
 use vote_map::*;
 
-pub use self::Senate::*;
-
 #[derive(Debug)]
-pub enum Senate {
-    Regular(Vec<CandidateId>),
-    Tied(Vec<CandidateId>, CandidateId, CandidateId)
+pub struct Senate<'a> {
+    pub senators: Vec<&'a Candidate>,
+    pub tied: bool,
 }
 
-pub fn decide_election(candidates: &[CandidateId], ballots: Vec<Ballot>, num_votes: u32, num_candidates: u32) -> Result<Senate, String> {
-    let quota = senate_quota(num_votes, num_candidates);
+impl<'a> Senate<'a> {
+    pub fn new() -> Senate<'a> {
+        Senate {
+            senators: vec![],
+            tied: false,
+        }
+    }
+
+    pub fn add_senator(&mut self, id: CandidateId, candidates: &'a CandidateMap) {
+        self.senators.push(&candidates[&id])
+    }
+
+    pub fn num_elected(&self) -> usize {
+        self.senators.len()
+    }
+}
+
+pub fn compute_quota(num_votes: u32, num_senators: u32) -> Frac {
+    (frac!(num_votes) / frac!(num_senators + 1)).floor() + frac!(1)
+}
+
+pub fn decide_election<'a>(candidates: &'a CandidateMap, ballots: Vec<Ballot>, num_votes: u32, num_candidates: u32) -> Result<Senate<'a>, String> {
+    let quota = compute_quota(num_votes, num_candidates);
     println!("Senate quota is: {}", quota);
 
     // TODO: Sanity check for all preferences (to make various unwraps safe).
@@ -26,28 +46,30 @@ pub fn decide_election(candidates: &[CandidateId], ballots: Vec<Ballot>, num_vot
         vote_map.add(ballot);
     }
 
-    // List of elected candidates.
-    let mut elected_candidates = vec![];
+    // List of elected candidates, as a Senate struct.
+    let mut result = Senate::new();
     // List of exhausted ballots.
     let mut exhausted_votes = vec![];
 
     // Stage 1: Elect all candidates with a full quota.
-    while let Some(candidate) = vote_map.get_candidate_with_quota(&quota) {
-        println!("Elected candidate {} in the first round of voting", candidate);
-        elected_candidates.push(candidate);
-        let mut exhausted = vote_map.elect_candidate(candidate, &quota);
+    while let Some(id) = vote_map.get_candidate_with_quota(&quota) {
+        println!("Elected candidate {:?} in the first round of voting", candidates[&id]);
+        result.add_senator(id, candidates);
+        let mut exhausted = vote_map.elect_candidate(id, &quota);
         exhausted_votes.append(&mut exhausted);
     }
 
     // Stage 2: Winnow out the shithouse candidates until we've elected enough
     // candidates based on preferences, OR reached only two candidates.
-    while elected_candidates.len() < num_candidates as usize {
+    while result.num_elected() < num_candidates as usize {
         assert!(vote_map.tally.len() >= 2);
-        let positions_remaining = num_candidates as usize - elected_candidates.len();
+        let positions_remaining = num_candidates as usize - result.num_elected();
         // If there is some number of candidates still to be elected, and all other
         // candidates have been eliminated, then elect all the remaining candidates.
         if vote_map.tally.len() == positions_remaining {
-            elected_candidates.extend(vote_map.tally.drain().map(|(c, _)| c));
+            for (id, _) in vote_map.tally.drain() {
+                result.add_senator(id, candidates);
+            }
             break;
         }
 
@@ -60,12 +82,15 @@ pub fn decide_election(candidates: &[CandidateId], ballots: Vec<Ballot>, num_vot
             let (c2, ref v2) = last_two[1];
             let winner = match Ord::cmp(v1, v2) {
                 Equal => {
-                    return Ok(Tied(elected_candidates, c1, c2));
+                    result.tied = true;
+                    result.add_senator(c1, candidates);
+                    result.add_senator(c2, candidates);
+                    return Ok(result);
                 }
                 Greater => c1,
                 Less => c2,
             };
-            elected_candidates.push(winner);
+            result.add_senator(winner, candidates);
             break;
         }
 
@@ -77,12 +102,12 @@ pub fn decide_election(candidates: &[CandidateId], ballots: Vec<Ballot>, num_vot
         // If there is now a candidate with a full quota, elect them!
         if let Some(candidate) = vote_map.get_candidate_with_quota(&quota) {
             println!("Electing candidate: {}", candidate);
-            elected_candidates.push(candidate);
+            result.add_senator(candidate, candidates);
             let mut ex = vote_map.elect_candidate(candidate, &quota);
             exhausted_votes.append(&mut ex);
         }
     }
-    assert_eq!(elected_candidates.len(), num_candidates as usize);
+    assert_eq!(result.num_elected(), num_candidates as usize);
 
-    Ok(Regular(elected_candidates))
+    Ok(result)
 }

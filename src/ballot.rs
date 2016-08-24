@@ -1,9 +1,5 @@
-use std::collections::HashMap;
-
 use util::*;
-
-/// A candidate ID is an integer representing a candidate.
-pub type CandidateId = u32;
+use candidate::*;
 
 /// Temporary preference map type mapping candidate IDs to preferences.
 pub type PrefMap = HashMap<CandidateId, u32>;

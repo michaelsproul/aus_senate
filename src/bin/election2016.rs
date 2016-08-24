@@ -6,8 +6,9 @@ use std::error::Error;
 use std::io::Read;
 use std::env;
 use std::fs::File;
-use std::collections::HashMap;
 
+use aus_senate::group::*;
+use aus_senate::candidate::*;
 use aus_senate::ballot::*;
 use aus_senate::voting::*;
 use aus_senate::util::*;
@@ -41,16 +42,6 @@ struct CandidateRow {
     contact_email: String,
 }
 
-#[derive(Debug)]
-pub struct Candidate {
-    id: CandidateId,
-    state: String,
-    surname: String,
-    other_names: String,
-    group_name: String,
-    party: String,
-}
-
 fn parse_candidates_file<R: Read>(input: R) -> Result<Vec<Candidate>, Box<Error>> {
     let mut result = vec![];
     let mut reader = csv::Reader::from_reader(input);
@@ -62,11 +53,11 @@ fn parse_candidates_file<R: Read>(input: R) -> Result<Vec<Candidate>, Box<Error>
         }
         result.push(Candidate {
             id: id as u32,
-            state: row.state_ab,
             surname: row.surname,
             other_names: row.other_names,
             group_name: row.ticket,
             party: row.party,
+            state: row.state_ab,
         });
     }
 
@@ -78,30 +69,6 @@ fn get_candidate_id_list(candidates: &[Candidate], state: &String) -> Vec<Candid
         .filter(|c| &c.state == state)
         .map(|c| c.id)
         .collect()
-}
-
-#[derive(Debug)]
-struct Group {
-    name: String,
-    candidate_ids: Vec<CandidateId>
-}
-
-fn get_group_list(candidates: &[Candidate], state: &String) -> Vec<Group> {
-    let mut groups: Vec<Group> = vec![];
-    for c in candidates.iter().filter(|c| &c.state == state) {
-        // If there's already a group for this candidate, add them and continue.
-        if let Some(current_group) = groups.last_mut() {
-            if current_group.name == c.group_name {
-                current_group.candidate_ids.push(c.id);
-                continue;
-            }
-        }
-        // Otherwise, push a new group to the list (skipping the ungrouped group).
-        if c.group_name != "UG" {
-            groups.push(Group { name: c.group_name.clone(), candidate_ids: vec![c.id] });
-        }
-    }
-    groups
 }
 
 #[derive(RustcDecodable, Debug)]
@@ -225,29 +192,26 @@ fn main_with_result() -> Result<(), Box<Error>> {
     }
 
     // Extract candidate and group information from the complete list of ballots.
+    let candidates = get_state_candidates(&all_candidates, state);
+    // FIXME: kill candidate_ids.
     let candidate_ids = get_candidate_id_list(&all_candidates, state);
     let groups = get_group_list(&all_candidates, state);
+
+    println!("Num groups: {}", groups.len());
+    println!("Groups: {:#?}", groups);
 
     let prefs_file = try!(open_aec_csv(prefs_file_name));
     let (ballots, num_votes) = try!(parse_preferences_file(prefs_file, &groups, &candidate_ids));
 
-    println!("Num ballots: {}", ballots.len());
+    let election_result = try!(decide_election(&candidates, ballots, num_votes, 12));
 
-    let election_result = try!(decide_election(&candidate_ids, ballots, num_votes, 12));
-
-    let elected_ids = match election_result {
-        Regular(ids) => ids,
-        Tied(ids, _, _) => { println!("Tie!"); ids }
-    };
-
-    for id in elected_ids {
-        for c in all_candidates.iter() {
-            if c.id == id {
-                println!("Elected: {} {} ({})", c.other_names, c.surname, c.party);
-            }
-        }
+    for c in election_result.senators.iter() {
+        println!("Elected: {} {} ({})", c.other_names, c.surname, c.party);
     }
 
+    if election_result.tied {
+        println!("Tie for the last place");
+    }
 
     Ok(())
 }

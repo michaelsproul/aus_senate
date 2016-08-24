@@ -2,11 +2,12 @@
 extern crate csv;
 extern crate rustc_serialize;
 
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::env;
 use std::error::Error;
 use std::io::Read;
 
+use aus_senate::candidate::*;
 use aus_senate::ballot::*;
 use aus_senate::voting::*;
 use aus_senate::util::*;
@@ -33,10 +34,6 @@ struct GVTRow {
     party_ab: String,
     party_name: String,
     preference: u32
-}
-
-fn get_candidate_list(gvt: &GVT, state: &str) -> Vec<CandidateId> {
-    gvt[state]["A"].clone()
 }
 
 // NOTE: This is a tad slow, but it beats mucking around with manual row groupings.
@@ -153,18 +150,51 @@ fn count_gvt_votes(gvt_usage: &GVTUsage, state: &str) -> u32 {
     gvt_usage[state].iter().map(|(_, &vote_count)| vote_count).fold(0, |acc, c| acc + c)
 }
 
+// TODO: Use this parser for 2016 candidate files as well.
+#[derive(RustcDecodable, Debug)]
+struct CandidateRow {
+    state_ab: String,
+    party_ab: String,
+    party_name: String,
+    candidate_id: CandidateId,
+    surname: String,
+    given_names: String,
+    elected: String,
+    historic_elected: String,
+}
+
+fn parse_candidates_file<R: Read>(input: R) -> Result<Vec<Candidate>, Box<Error>> {
+    let mut result = vec![];
+    let mut reader = csv::Reader::from_reader(input);
+
+    for raw_row in reader.decode::<CandidateRow>() {
+        let row = try!(raw_row);
+        result.push(Candidate {
+            id: row.candidate_id,
+            surname: row.surname,
+            other_names: row.given_names,
+            group_name: row.party_ab,
+            party: row.party_name,
+            state: row.state_ab,
+        });
+    }
+
+    Ok(result)
+}
+
 fn main_with_result() -> Result<(), Box<Error>> {
     let args: Vec<String> = env::args().collect();
 
-    if args.len() != 5 {
-        println!("Usage: ./election2013 <gvt file> <gvt usage file> <btl votes> <state>");
+    if args.len() != 6 {
+        println!("Usage: ./election2013 <candidates file> <gvt file> <gvt usage file> <btl votes> <state>");
         try!(Err("invalid command line arguments.".to_string()));
     }
 
-    let gvt_file_name = &args[1];
-    let gvt_usage_file_name = &args[2];
-    let btl_file_name = &args[3];
-    let state = &args[4];
+    let candidates_file_name = &args[1];
+    let gvt_file_name = &args[2];
+    let gvt_usage_file_name = &args[3];
+    let btl_file_name = &args[4];
+    let state = &args[5];
 
     let gvt_file = try!(open_aec_csv(gvt_file_name));
     let gvt = try!(parse_gvt(gvt_file));
@@ -174,7 +204,10 @@ fn main_with_result() -> Result<(), Box<Error>> {
     let btl_file = try!(open_aec_csv(btl_file_name));
     let btl_votes = try!(parse_btl_votes(btl_file));
 
-    let candidates = get_candidate_list(&gvt, state);
+    let candidates_file = try!(open_aec_csv(candidates_file_name));
+    let all_candidates = try!(parse_candidates_file(candidates_file));
+
+    let candidates = get_state_candidates(&all_candidates, state);
 
     // Construct the initial list of ballots according to the GVT.
     let mut ballots = create_gvt_ballot_list(&gvt, &gvt_usage, state);
@@ -186,7 +219,15 @@ fn main_with_result() -> Result<(), Box<Error>> {
         Ballot::new(1, pref_map_to_vec(pref_map))
     }));
 
-    println!("{:?}", decide_election(&candidates, ballots, num_votes, 6));
+    let result = try!(decide_election(&candidates, ballots, num_votes, 6));
+
+    for s in result.senators.iter() {
+        println!("Elected: {} {} ({})", s.other_names, s.surname, s.party);
+    }
+
+    if result.tied {
+        println!("Those last two tied for the last seat.");
+    }
 
     Ok(())
 }

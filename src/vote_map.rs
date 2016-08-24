@@ -1,6 +1,5 @@
-use std::collections::HashMap;
-
 use ballot::*;
+use candidate::*;
 use util::*;
 
 /// Intermediate data structure mapping candidates to ballots.
@@ -10,12 +9,12 @@ pub struct VoteMap {
 }
 
 impl VoteMap {
-    pub fn new(candidates: &[CandidateId]) -> Result<VoteMap, String> {
+    pub fn new(candidates: &CandidateMap) -> Result<VoteMap, String> {
         let mut v = VoteMap {
             tally: HashMap::new(),
             map: HashMap::new(),
         };
-        for &id in candidates.iter() {
+        for &id in candidates.keys() {
             let e1 = v.tally.insert(id, frac!(0));
             let e2 = v.map.insert(id, vec![]);
             if e1.is_some() || e2.is_some() {
@@ -27,7 +26,7 @@ impl VoteMap {
         Ok(v)
     }
 
-    /// Add a ballot with the given single-vote weighting.
+    /// Add votes to a candidate's tally according to the weight and current preference of a ballot.
     pub fn add(&mut self, ballot: Ballot) {
         let candidate = ballot.prefs[ballot.current];
         // Add to the candidate's tally.
