@@ -1,9 +1,11 @@
 use std::cmp::Ordering::*;
+use std::error::Error;
 
 use util::*;
 use candidate::*;
 use ballot::*;
 use vote_map::*;
+use parse::*;
 
 #[derive(Debug)]
 pub struct Senate<'a> {
@@ -32,19 +34,39 @@ pub fn compute_quota(num_votes: u32, num_senators: u32) -> Frac {
     (frac!(num_votes) / frac!(num_senators + 1)).floor() + frac!(1)
 }
 
-pub fn decide_election<'a>(candidates: &'a CandidateMap, ballots: Vec<Ballot>, num_votes: u32, num_candidates: u32) -> Result<Senate<'a>, String> {
-    let quota = compute_quota(num_votes, num_candidates);
-    println!("Senate quota is: {}", quota);
-
+pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballots: I, num_candidates: u32)
+    -> Result<Senate<'a>, Box<Error>>
+    where I: IntoIterator<Item=IOBallot>
+{
     // TODO: Sanity check for all preferences (to make various unwraps safe).
 
     // Map from candidate IDs to numbers of votes.
     let mut vote_map = try!(VoteMap::new(candidates));
 
     // Allocate first preference votes.
-    for ballot in ballots {
-        vote_map.add(ballot);
+    let mut num_votes = 0;
+    let one = frac!(1);
+    for maybe_ballot in ballots {
+        let multi_ballot = match maybe_ballot {
+            Ok(b) => b,
+            Err(InvalidBallot(_)) => {
+                // TODO: ballot statistics
+                continue;
+            },
+            Err(InputError(e)) => {
+                return Err(e);
+            }
+        };
+        let MultiBallot { ballot, value } = multi_ballot;
+        num_votes += value.unwrap_or(1);
+        match value {
+            Some(v) => vote_map.add(ballot, &frac!(v)),
+            None => vote_map.add(ballot, &one),
+        }
     }
+
+    let quota = compute_quota(num_votes, num_candidates);
+    println!("Senate quota is: {}", quota);
 
     // List of elected candidates, as a Senate struct.
     let mut result = Senate::new();

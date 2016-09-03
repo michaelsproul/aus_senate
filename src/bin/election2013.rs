@@ -11,6 +11,7 @@ use aus_senate::candidate::*;
 use aus_senate::ballot::*;
 use aus_senate::voting::*;
 use aus_senate::util::*;
+use aus_senate::parse::*;
 
 /// Group voting ticket description. Maps states to ticket names to preference lists.
 type GVT = HashMap<String, HashMap<String, Vec<CandidateId>>>;
@@ -134,7 +135,8 @@ fn parse_btl_votes<R: Read>(input: R) -> Result<BelowTheLine, Box<Error>> {
     Ok(btl_votes)
 }
 
-fn create_gvt_ballot_list(gvt: &GVT, gvt_usage: &GVTUsage, state: &str) -> Vec<Ballot> {
+// FIXME: use iterators instead
+fn create_gvt_ballot_list(gvt: &GVT, gvt_usage: &GVTUsage, state: &str) -> Vec<IOBallot> {
     gvt_usage[state]
         .iter()
         // If the vote count is 0, then we can safely skip adding this bit of GVT usage.
@@ -142,12 +144,8 @@ fn create_gvt_ballot_list(gvt: &GVT, gvt_usage: &GVTUsage, state: &str) -> Vec<B
         // with a count of 0, but absent are from the actual GVT description.
         .filter(|&(_, &vote_count)| vote_count != 0)
         // We then create a ballot with the right list of preferences from the GVT description.
-        .map(|(group, &vote_count)| Ballot::new(vote_count, gvt[state][group].clone()))
+        .map(|(group, &vote_count)| Ok(MultiBallot::multi(vote_count, gvt[state][group].clone())))
         .collect()
-}
-
-fn count_gvt_votes(gvt_usage: &GVTUsage, state: &str) -> u32 {
-    gvt_usage[state].iter().map(|(_, &vote_count)| vote_count).fold(0, |acc, c| acc + c)
 }
 
 // TODO: Use this parser for 2016 candidate files as well.
@@ -211,15 +209,14 @@ fn main_with_result() -> Result<(), Box<Error>> {
 
     // Construct the initial list of ballots according to the GVT.
     let mut ballots = create_gvt_ballot_list(&gvt, &gvt_usage, state);
-    let num_votes = count_gvt_votes(&gvt_usage, state) + btl_votes.len() as u32;
 
     // Then extend it with the below the line votes.
-    // TODO: Dedupe below the line ballots.
+    // TODO: Make this a lazy iterator like for 2016.
     ballots.extend(btl_votes.into_iter().map(|(_, pref_map)| {
-        Ballot::new(1, pref_map_to_vec(pref_map))
+        Ok(MultiBallot::single(pref_map_to_vec(pref_map)))
     }));
 
-    let result = try!(decide_election(&candidates, ballots, num_votes, 6));
+    let result = try!(decide_election(&candidates, ballots, 6));
 
     for s in result.senators.iter() {
         println!("Elected: {} {} ({})", s.other_names, s.surname, s.party);

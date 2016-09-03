@@ -12,6 +12,7 @@ use aus_senate::candidate::*;
 use aus_senate::ballot::*;
 use aus_senate::voting::*;
 use aus_senate::util::*;
+use aus_senate::parse::*;
 
 #[derive(RustcDecodable, Debug)]
 struct CandidateRow {
@@ -81,14 +82,14 @@ struct PrefRow {
     preferences: String,
 }
 
-fn ballot_below_the_line(raw_prefs: Vec<&str>, candidates: &[CandidateId]) -> Result<Vec<CandidateId>, Box<Error>> {
+fn ballot_below_the_line(raw_prefs: Vec<&str>, candidates: &[CandidateId]) -> Result<Vec<CandidateId>, BallotParseErr> {
     let mut pref_map = HashMap::new();
 
     for (idx, pref) in raw_prefs.iter().enumerate() {
         if pref.is_empty() {
             continue;
         }
-        let pref_int = try!(pref.parse::<u32>());
+        let pref_int = try!(pref.parse::<u32>().map_err(|_| InvalidBallot("Pref not an int".to_string())));
         pref_map.insert(candidates[idx], pref_int);
     }
     let prefs = pref_map_to_vec(pref_map);
@@ -96,14 +97,14 @@ fn ballot_below_the_line(raw_prefs: Vec<&str>, candidates: &[CandidateId]) -> Re
 }
 
 // FIXME: this is a bit of a mess.
-fn ballot_above_the_line(raw_prefs: Vec<&str>, groups: &[Group]) -> Result<Vec<CandidateId>, Box<Error>> {
+fn ballot_above_the_line(raw_prefs: Vec<&str>, groups: &[Group]) -> Result<Vec<CandidateId>, BallotParseErr> {
     let mut pref_map = HashMap::new();
 
     for (group_idx, pref) in raw_prefs.iter().enumerate() {
         if pref.is_empty() {
             continue;
         }
-        let pref_int = try!(pref.parse::<u32>());
+        let pref_int = try!(pref.parse::<u32>().map_err(|_| InvalidBallot("Pref not an int".to_string())));
         pref_map.insert(pref_int, &groups[group_idx].candidate_ids);
     }
 
@@ -117,8 +118,9 @@ fn ballot_above_the_line(raw_prefs: Vec<&str>, groups: &[Group]) -> Result<Vec<C
 }
 
 // Convert a preferences string to a ballot.
+// TODO: Extend ballot parsing.
 fn pref_string_to_ballot(pref_string: &str, groups: &[Group], candidates: &[CandidateId])
-    -> Result<Vec<CandidateId>, Box<Error>>
+    -> Result<Vec<CandidateId>, BallotParseErr>
 {
     // Split the preference string into above and below the line sections.
     //println!("Pref string: {}", pref_string);
@@ -132,44 +134,29 @@ fn pref_string_to_ballot(pref_string: &str, groups: &[Group], candidates: &[Cand
     match (is_valid(&above_the_line), is_valid(&below_the_line)) {
         (true, false) => ballot_above_the_line(above_the_line, groups),
         (false, true) => ballot_below_the_line(below_the_line, candidates),
-        (true, true) => try!(Err("Both are valid")),
-        (false, false) => try!(Err("Empty vote")),
+        (true, true) => Err(InvalidBallot("both valid".to_string())),
+        (false, false) => Err(InvalidBallot("neither valid".to_string())),
     }
 }
 
-fn parse_preferences_file<R: Read>(input: R, groups: &[Group], candidates: &[CandidateId])
-    -> Result<(Vec<Ballot>, u32), Box<Error>>
-{
-    let mut reader = csv::Reader::from_reader(input);
-
-    let mut num_total_ballots = 0;
-    let mut num_invalid_ballots = 0;
-
-    let mut uniq_prefs: HashMap<Vec<CandidateId>, u32> = HashMap::new();
-
-    for raw_row in reader.decode::<PrefRow>() {
-        let row = try!(raw_row);
-        num_total_ballots += 1;
-
-        match pref_string_to_ballot(&row.preferences, groups, candidates) {
-            Ok(prefs) => {
-                let count = uniq_prefs.entry(prefs).or_insert(0);
-                *count += 1;
-            }
-            Err(_) => {
-                num_invalid_ballots += 1;
-            }
+fn parse_single_ballot(raw_row: csv::Result<PrefRow>, groups: &[Group], candidates: &[CandidateId]) -> IOBallot {
+    match raw_row {
+        Ok(row) => {
+            pref_string_to_ballot(&row.preferences, groups, candidates).map(|prefs| {
+                MultiBallot::single(prefs)
+            })
         }
+        Err(e) => Err(InputError(From::from(e)))
     }
-    let num_valid_votes = num_total_ballots - num_invalid_ballots;
-    println!("Invalid ballots: {}/{}", num_invalid_ballots, num_total_ballots);
-    println!("Unique ballots: {}/{}", uniq_prefs.len(), num_valid_votes);
+}
 
-    let ballots = uniq_prefs.into_iter().map(|(prefs, count)| {
-        Ballot::new(count, prefs)
-    }).collect();
-
-    Ok((ballots, num_valid_votes))
+// FIXME: This macro is to avoid writing the iterator type. Can use a function once impl Trait lands.
+macro_rules! parse_preferences_file {
+    ($reader:expr, $groups:expr, $candidates:expr) => {
+        $reader
+            .decode::<PrefRow>()
+            .map(|raw_row| parse_single_ballot(raw_row, $groups, $candidates))
+    }
 }
 
 fn main_with_result() -> Result<(), Box<Error>> {
@@ -201,9 +188,11 @@ fn main_with_result() -> Result<(), Box<Error>> {
     println!("Groups: {:#?}", groups);
 
     let prefs_file = try!(open_aec_csv(prefs_file_name));
-    let (ballots, num_votes) = try!(parse_preferences_file(prefs_file, &groups, &candidate_ids));
 
-    let election_result = try!(decide_election(&candidates, ballots, num_votes, 12));
+    let mut csv_reader = csv::Reader::from_reader(prefs_file);
+    let ballots_iter = parse_preferences_file!(csv_reader, &groups, &candidate_ids);
+
+    let election_result = try!(decide_election(&candidates, ballots_iter, 6));
 
     for c in election_result.senators.iter() {
         println!("Elected: {} {} ({})", c.other_names, c.surname, c.party);

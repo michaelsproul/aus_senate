@@ -2,10 +2,13 @@ use ballot::*;
 use candidate::*;
 use util::*;
 
+/// The value of a ballot is given by a rational number, and we store ballots bucketed by candidate.
+pub type BallotMap = HashMap<Ballot, Frac>;
+
 /// Intermediate data structure mapping candidates to ballots.
 pub struct VoteMap {
     pub tally: HashMap<CandidateId, Frac>,
-    pub map: HashMap<CandidateId, Vec<Ballot>>
+    pub map: HashMap<CandidateId, BallotMap>
 }
 
 impl VoteMap {
@@ -16,7 +19,7 @@ impl VoteMap {
         };
         for &id in candidates.keys() {
             let e1 = v.tally.insert(id, frac!(0));
-            let e2 = v.map.insert(id, vec![]);
+            let e2 = v.map.insert(id, HashMap::new());
             if e1.is_some() || e2.is_some() {
                 return Err(format!("Candidate ID {} appears more than once", id));
             }
@@ -27,14 +30,15 @@ impl VoteMap {
     }
 
     /// Add votes to a candidate's tally according to the weight and current preference of a ballot.
-    pub fn add(&mut self, ballot: Ballot) {
+    pub fn add(&mut self, ballot: Ballot, weight: &Frac) {
         let candidate = ballot.prefs[ballot.current];
         // Add to the candidate's tally.
         let mut vote_count = self.tally.get_mut(&candidate).expect(&format!("Candidate not found: {}", candidate));
-        *vote_count = &*vote_count + &ballot.weight;
+        *vote_count = &*vote_count + weight;
         // Add the ballot to the candidate's bucket.
         let mut bucket = self.map.get_mut(&candidate).unwrap();
-        bucket.push(ballot);
+        let mut ballot_value = bucket.entry(ballot).or_insert_with(|| frac!(0));
+        *ballot_value = &*ballot_value + weight;
     }
 
     /// Get the ID of a candidate whose vote exceeds the given quota.
@@ -58,7 +62,7 @@ impl VoteMap {
 
     /// Redistribute the votes for the given candidate.
     /// Transfer value should be 1 if the candidate is being knocked out,
-    /// or the (vote - quota) / (quota) if the candidate has been elected.
+    /// or the (vote - quota) / (vote) if the candidate has been elected.
     fn redistribute_votes(&mut self, candidate: CandidateId, transfer_value: &Frac)
     -> Vec<Ballot>
     {
@@ -67,12 +71,12 @@ impl VoteMap {
 
         let mut exhausted_ballots = vec![];
 
-        for mut ballot in ballots {
+        for (mut ballot, value) in ballots {
             match self.find_next_valid_preference(&ballot) {
                 Some(i) => {
                     ballot.current = i;
-                    ballot.weight = ballot.weight.clone() * transfer_value;
-                    self.add(ballot);
+                    let new_value = value * transfer_value;
+                    self.add(ballot, &new_value);
                 }
                 None => {
                     exhausted_ballots.push(ballot);
