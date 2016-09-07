@@ -47,7 +47,7 @@ fn parse_gvt<R: Read>(input: R) -> Result<GVT, Box<Error>> {
         let row = try!(result);
         let ticket_map = data.entry(row.state).or_insert_with(HashMap::new);
         let pref_map = ticket_map.entry(row.owner_ticket).or_insert_with(HashMap::new);
-        pref_map.insert(row.candidate_id, row.preference);
+        pref_map.insert(row.preference, row.candidate_id);
     }
 
     // Convert inner preference maps into lists.
@@ -55,7 +55,7 @@ fn parse_gvt<R: Read>(input: R) -> Result<GVT, Box<Error>> {
     for (state, ticket_map) in data {
         let new_ticket_map = result.entry(state).or_insert_with(HashMap::new);
         for (ticket, pref_map) in ticket_map {
-            new_ticket_map.insert(ticket, pref_map_to_vec(pref_map));
+            new_ticket_map.insert(ticket, flatten_pref_map(pref_map));
         }
     }
     Ok(result)
@@ -116,8 +116,12 @@ fn parse_btl_votes<R: Read>(input: R) -> Result<BelowTheLine, Box<Error>> {
         match row.preference {
             Some(pref) => {
                 let voter_prefs = btl_votes.entry(vote_id).or_insert_with(HashMap::new);
-                let prev = voter_prefs.insert(row.candidate_id, pref);
-                assert!(prev.is_none());
+                let prev = voter_prefs.insert(pref, row.candidate_id);
+                // Can't assign a single preference to more than one candidate!
+                // NOTE: this makes loads of NSW BTL ballots invalid... around 15%. Weird.
+                if prev.is_some() {
+                    invalid_votes.insert(vote_id);
+                }
             }
             None => {
                 invalid_votes.insert(vote_id);
@@ -213,7 +217,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
     // Then extend it with the below the line votes.
     // TODO: Make this a lazy iterator like for 2016.
     ballots.extend(btl_votes.into_iter().map(|(_, pref_map)| {
-        Ok(MultiBallot::single(pref_map_to_vec(pref_map)))
+        Ok(MultiBallot::single(flatten_pref_map(pref_map)))
     }));
 
     let result = try!(decide_election(&candidates, ballots, 6));

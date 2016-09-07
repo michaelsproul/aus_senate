@@ -45,12 +45,13 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballots: I, num_cand
 
     // Allocate first preference votes.
     let mut num_votes = 0;
+    let mut num_invalid_votes = 0;
     let one = frac!(1);
     for maybe_ballot in ballots {
         let multi_ballot = match maybe_ballot {
             Ok(b) => b,
             Err(InvalidBallot(_)) => {
-                // TODO: ballot statistics
+                num_invalid_votes += 1;
                 continue;
             },
             Err(InputError(e)) => {
@@ -64,6 +65,9 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballots: I, num_cand
             None => vote_map.add(ballot, &one),
         }
     }
+
+    // TODO: proper vote statistics
+    println!("Num valid votes: {}/{}", num_votes, num_votes + num_invalid_votes);
 
     let quota = compute_quota(num_votes, num_candidates);
     println!("Senate quota is: {}", quota);

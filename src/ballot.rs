@@ -1,14 +1,4 @@
-use util::*;
 use candidate::*;
-
-/// Temporary preference map type mapping candidate IDs to preferences.
-pub type PrefMap = HashMap<CandidateId, u32>;
-
-pub fn pref_map_to_vec(pref_map: PrefMap) -> Vec<CandidateId> {
-    let mut temp: Vec<_> = pref_map.into_iter().collect();
-    temp.sort_by_key(|&(_, pref)| pref);
-    temp.into_iter().map(|(cand, _)| cand).collect()
-}
 
 /// A Ballot represents an individual's order of preferences.
 #[derive(PartialEq, Eq, Hash, Debug)]
