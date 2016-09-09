@@ -11,7 +11,7 @@ use aus_senate::candidate::*;
 use aus_senate::ballot::*;
 use aus_senate::voting::*;
 use aus_senate::util::*;
-use aus_senate::parse::*;
+use aus_senate::ballot_parse::*;
 
 /// Group voting ticket description. Maps states to ticket names to preference lists.
 type GVT = HashMap<String, HashMap<String, Vec<CandidateId>>>;

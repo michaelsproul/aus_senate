@@ -5,7 +5,7 @@ use util::*;
 use candidate::*;
 use ballot::*;
 use vote_map::*;
-use parse::*;
+use ballot_parse::*;
 
 #[derive(Debug)]
 pub struct Senate<'a> {

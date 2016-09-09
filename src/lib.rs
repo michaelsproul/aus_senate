@@ -12,4 +12,4 @@ pub mod group;
 pub mod ballot;
 pub mod voting;
 pub mod vote_map;
-pub mod parse;
+pub mod ballot_parse;
