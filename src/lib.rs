@@ -4,6 +4,8 @@
 extern crate alloc_system;
 
 extern crate num;
+extern crate csv;
+extern crate rustc_serialize;
 
 #[macro_use]
 pub mod util;
@@ -13,3 +15,4 @@ pub mod ballot;
 pub mod voting;
 pub mod vote_map;
 pub mod ballot_parse;
+pub mod parse;
