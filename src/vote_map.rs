@@ -41,6 +41,10 @@ impl VoteMap {
         *ballot_value = &*ballot_value + weight;
     }
 
+    pub fn add_multi_ballot(&mut self, MultiBallot { ballot, value }: MultiBallot) {
+        self.add(ballot, &frac!(value));
+    }
+
     /// Get the ID of a candidate whose vote exceeds the given quota.
     pub fn get_candidate_with_quota(&self, quota: &Frac) -> Option<CandidateId> {
         self.tally.iter().filter(|&(_, votes)| votes >= quota).map(|(&c, _)| c).next()

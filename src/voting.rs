@@ -3,32 +3,9 @@ use std::error::Error;
 
 use util::*;
 use candidate::*;
-use ballot::*;
 use vote_map::*;
 use ballot_parse::*;
-
-#[derive(Debug)]
-pub struct Senate<'a> {
-    pub senators: Vec<&'a Candidate>,
-    pub tied: bool,
-}
-
-impl<'a> Senate<'a> {
-    pub fn new() -> Senate<'a> {
-        Senate {
-            senators: vec![],
-            tied: false,
-        }
-    }
-
-    pub fn add_senator(&mut self, id: CandidateId, candidates: &'a CandidateMap) {
-        self.senators.push(&candidates[&id])
-    }
-
-    pub fn num_elected(&self) -> usize {
-        self.senators.len()
-    }
-}
+use senate_result::*;
 
 pub fn compute_quota(num_votes: u32, num_senators: u32) -> Frac {
     (frac!(num_votes) / frac!(num_senators + 1)).floor() + frac!(1)
@@ -40,40 +17,30 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballots: I, num_cand
 {
     // TODO: Sanity check for all preferences (to make various unwraps safe).
 
+    // List of elected candidates, as well as algorithm statistics.
+    let mut result = Senate::new();
+
     // Map from candidate IDs to numbers of votes.
     let mut vote_map = try!(VoteMap::new(candidates));
 
     // Allocate first preference votes.
-    let mut num_votes = 0;
-    let mut num_invalid_votes = 0;
-    let one = frac!(1);
     for maybe_ballot in ballots {
-        let multi_ballot = match maybe_ballot {
-            Ok(b) => b,
-            Err(InvalidBallot(_)) => {
-                num_invalid_votes += 1;
-                continue;
-            },
+        match maybe_ballot {
+            Ok(multi_ballot) => {
+                result.stats.record_valid_vote(&multi_ballot);
+                vote_map.add_multi_ballot(multi_ballot);
+            }
+            Err(InvalidBallot(err)) => {
+                result.stats.record_invalid_vote(err);
+            }
             Err(InputError(e)) => {
                 return Err(e);
             }
         };
-        let MultiBallot { ballot, value } = multi_ballot;
-        num_votes += value.unwrap_or(1);
-        match value {
-            Some(v) => vote_map.add(ballot, &frac!(v)),
-            None => vote_map.add(ballot, &one),
-        }
     }
 
-    // TODO: proper vote statistics
-    println!("Num valid votes: {}/{}", num_votes, num_votes + num_invalid_votes);
+    let quota = compute_quota(result.stats.num_valid_votes(), num_candidates);
 
-    let quota = compute_quota(num_votes, num_candidates);
-    println!("Senate quota is: {}", quota);
-
-    // List of elected candidates, as a Senate struct.
-    let mut result = Senate::new();
     // List of exhausted ballots.
     let mut exhausted_votes = vec![];
 

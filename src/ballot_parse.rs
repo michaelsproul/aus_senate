@@ -17,6 +17,7 @@ pub enum BallotParseErr {
     InputError(Box<Error>),
 }
 
+#[derive(PartialEq, Eq, Hash, Debug)]
 pub enum InvalidBallotErr {
     InvalidCharacter,
     InvalidMinAbove(usize),

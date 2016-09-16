@@ -28,7 +28,7 @@ impl Ballot {
 /// in order to avoid the memory overhead of storing the vote value in the MultiBallot.
 pub struct MultiBallot {
     /// Number of people that voted according to this set of preferences.
-    pub value: Option<u32>,
+    pub value: u32,
     /// Preferences shared by everyone on this multi-ballot.
     pub ballot: Ballot,
 }
@@ -40,7 +40,7 @@ impl MultiBallot {
 
     pub fn multi(value: u32, prefs: Vec<CandidateId>) -> MultiBallot {
         MultiBallot {
-            value: Some(value),
+            value: value,
             ballot: Ballot::new(prefs),
         }
     }

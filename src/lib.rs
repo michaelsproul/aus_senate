@@ -16,3 +16,5 @@ pub mod voting;
 pub mod vote_map;
 pub mod ballot_parse;
 pub mod parse;
+pub mod senate_result;
+pub mod stats;
