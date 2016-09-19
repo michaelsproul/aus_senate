@@ -2,6 +2,9 @@
 extern crate aus_senate;
 extern crate csv;
 extern crate rustc_serialize;
+#[macro_use]
+extern crate log;
+extern crate env_logger;
 
 use std::error::Error;
 use std::io::Read;
@@ -73,6 +76,8 @@ fn get_candidate_id_list(candidates: &[Candidate], state: &String) -> Vec<Candid
 }
 
 fn main_with_result() -> Result<(), Box<Error>> {
+    try!(env_logger::init());
+
     let args: Vec<String> = env::args().collect();
 
     if args.len() != 4 && args.len() != 5 {
@@ -92,7 +97,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
     let all_candidates = try!(parse_candidates_file(candidates_file));
 
     for c in all_candidates.iter() {
-        println!("{}: {} {} ({})", c.id, c.other_names, c.surname, c.party);
+        debug!("{}: {} {} ({})", c.id, c.other_names, c.surname, c.party);
     }
 
     // Extract candidate and group information from the complete list of ballots.
@@ -103,8 +108,8 @@ fn main_with_result() -> Result<(), Box<Error>> {
     // TODO: command-line configurable constraints
     let constraints = Constraints::lax2016();
 
-    println!("Num groups: {}", groups.len());
-    println!("Groups: {:#?}", groups);
+    debug!("Num groups: {}", groups.len());
+    trace!("Groups: {:#?}", groups);
 
     let prefs_file = try!(open_aec_csv(prefs_file_name));
 
@@ -114,11 +119,11 @@ fn main_with_result() -> Result<(), Box<Error>> {
     let election_result = try!(decide_election(&candidates, ballots_iter, num_candidates));
 
     for c in election_result.senators.iter() {
-        println!("Elected: {} {} ({})", c.other_names, c.surname, c.party);
+        info!("Elected: {} {} ({})", c.other_names, c.surname, c.party);
     }
 
     if election_result.tied {
-        println!("Tie for the last place");
+        info!("Tie for the last place");
     }
 
     Ok(())
@@ -126,6 +131,6 @@ fn main_with_result() -> Result<(), Box<Error>> {
 
 fn main() {
     if let Err(e) = main_with_result() {
-        println!("Error: {:?}", e);
+        error!("Error: {:?}", e);
     }
 }

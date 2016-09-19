@@ -3,6 +3,9 @@
 #[cfg(feature = "osx_mem_profile")]
 extern crate alloc_system;
 
+#[macro_use]
+extern crate log;
+extern crate env_logger;
 extern crate num;
 extern crate csv;
 extern crate rustc_serialize;

@@ -96,7 +96,7 @@ impl VoteMap {
             let num_votes = &self.tally[&candidate];
             (num_votes - quota) / num_votes
         };
-        println!("Transferring at value: {}", transfer_value);
+        trace!("Transferring at value: {}", transfer_value);
         self.redistribute_votes(candidate, &transfer_value)
     }
 
