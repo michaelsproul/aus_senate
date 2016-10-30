@@ -2,7 +2,20 @@
 
 import os
 import json
+import hashlib
 import requests
+
+def sha256sum(f, blocksize=65536):
+    hasher = hashlib.sha256()
+    buf = f.read(blocksize)
+    while len(buf) > 0:
+        hasher.update(buf)
+        buf = f.read(blocksize)
+    return hasher.hexdigest()
+
+def sha256_file(filename):
+    with open(filename, "rb") as f:
+        return sha256sum(f)
 
 def main():
     sources_file = "data_sources.json"
@@ -23,13 +36,10 @@ def main():
         with open(filename, "w") as output:
             output.write(res.text)
 
-        # TODO: sha256 checksums
-        # checksum = sha256_file(filename)
+        checksum = sha256_file(filename)
 
-        # print(checksum)
-
-        # if checksum != info["sha256"]:
-        #    print("Checksum error!")
+        if checksum != info["sha256"]:
+            print("Checksum error!\nExpected: {}\nDownloaded: {}".format(info["sha256"], checksum))
 
 if __name__ == "__main__":
     main()
