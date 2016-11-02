@@ -18,7 +18,7 @@ def sha256_file(filename):
     with open(filename, "rb") as f:
         return sha256sum(f)
 
-def main():
+def fetch():
     # Load data sources file
     sources_file = "data_sources.json"
 
@@ -84,4 +84,4 @@ def checksum_ok(filename: str, checksum: str) -> bool:
     return checksum is None or sha256_file(filename) == checksum
 
 if __name__ == "__main__":
-    main()
+    fetch()
