@@ -2,5 +2,12 @@
     "candidate_ordering.csv": {
         "url": "https://sproul.xyz/election2016/candidate_ordering.csv",
         "sha256": "7fab2c481db81a779d955ebd4d8f525bc28211013e21ac0977b16c558546bc3b"
+    },
+    "NSW_prefs.csv": {
+        "zipped": true,
+        "url": "http://results.aec.gov.au/20499/Website/External/aec-senate-formalpreferences-20499-NSW.zip",
+        "inner-file": "aec-senate-formalpreferences-20499-NSW.csv",
+        "zip-sha256": "62911ba83f46d539de6d00d8ac8046904c1a2de51e5ac73c46c3bd6f1a5b2c8c",
+        "sha256": "d425175863019284a7c04c2e3795b8a7e6b18aacabc239e6859912c678489a18"
     }
 }
