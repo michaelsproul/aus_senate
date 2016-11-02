@@ -119,11 +119,11 @@ fn main_with_result() -> Result<(), Box<Error>> {
     let election_result = try!(decide_election(&candidates, ballots_iter, num_candidates));
 
     for c in election_result.senators.iter() {
-        info!("Elected: {} {} ({})", c.other_names, c.surname, c.party);
+        println!("Elected: {} {} ({})", c.other_names, c.surname, c.party);
     }
 
     if election_result.tied {
-        info!("Tie for the last place");
+        println!("Tie for the last place");
     }
 
     Ok(())
