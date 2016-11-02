@@ -3,11 +3,60 @@
         "url": "https://sproul.xyz/election2016/candidate_ordering.csv",
         "sha256": "7fab2c481db81a779d955ebd4d8f525bc28211013e21ac0977b16c558546bc3b"
     },
-    "NSW_prefs.csv": {
+    "ACT.csv": {
+        "zipped": true,
+        "url": "http://results.aec.gov.au/20499/Website/External/aec-senate-formalpreferences-20499-ACT.zip",
+        "inner-file": "aec-senate-formalpreferences-20499-ACT.csv",
+        "zip-sha256": "81f30f3bbbc66d01dd11f6288cb7e7567c2eec037a8eeaca69ce88a722fb86c0",
+        "sha256": "83c05e9684fea885db104febd81c28aa22c142b04bc8b9e6741fb2db35a4bd29"
+    },
+    "NSW.csv": {
         "zipped": true,
         "url": "http://results.aec.gov.au/20499/Website/External/aec-senate-formalpreferences-20499-NSW.zip",
         "inner-file": "aec-senate-formalpreferences-20499-NSW.csv",
         "zip-sha256": "62911ba83f46d539de6d00d8ac8046904c1a2de51e5ac73c46c3bd6f1a5b2c8c",
         "sha256": "d425175863019284a7c04c2e3795b8a7e6b18aacabc239e6859912c678489a18"
+    },
+    "NT.csv": {
+        "zipped": true,
+        "url": "http://results.aec.gov.au/20499/Website/External/aec-senate-formalpreferences-20499-NT.zip",
+        "inner-file": "aec-senate-formalpreferences-20499-NT.csv",
+        "zip-sha256": "82d3980b7654f79765e125397e711a943ca2f56f558db43259435879ec9fdd1a",
+        "sha256": "90cf9de0f9e18ba784cad757111e3e02fcbb66512e884dc50aa547f66e4846b7"
+    },
+    "QLD.csv": {
+        "zipped": true,
+        "url": "http://results.aec.gov.au/20499/Website/External/aec-senate-formalpreferences-20499-QLD.zip",
+        "inner-file": "aec-senate-formalpreferences-20499-QLD.csv",
+        "zip-sha256": "a1313274de80d70ea1642cde59e9dea9491c6bfcd8adc1681fa70b72323c0e9e",
+        "sha256": "3c85e023a576d48fa13634caf98d4e4e48470da170a032c37457c99f89a00aea"
+    },
+    "SA.csv": {
+        "zipped": true,
+        "url": "http://results.aec.gov.au/20499/Website/External/aec-senate-formalpreferences-20499-SA.zip",
+        "inner-file": "aec-senate-formalpreferences-20499-SA.csv",
+        "zip-sha256": "aa9ad4b53c7ba7e3b6d286a9e58ae1ef2ef9899b585f916e7b644a5897eeaca7",
+        "sha256": "430a4277a81513020110ee2eff7c4bfee6729611adee3ca62aa97dfaffeafe0e"
+    },
+    "TAS.csv": {
+        "zipped": true,
+        "url": "http://results.aec.gov.au/20499/Website/External/aec-senate-formalpreferences-20499-TAS.zip",
+        "inner-file": "aec-senate-formalpreferences-20499-TAS.csv",
+        "zip-sha256": "216069ef5641e7cc73cff193108638742fff6bba77a09bb7f6999bf0dc5d2c14",
+        "sha256": "3c50f9f61d0356fba9738f40bcc0342eb4a360dea55e3c0bac3988cea679ab0c"
+    },
+    "VIC.csv": {
+        "zipped": true,
+        "url": "http://results.aec.gov.au/20499/Website/External/aec-senate-formalpreferences-20499-VIC.zip",
+        "inner-file": "aec-senate-formalpreferences-20499-VIC.csv",
+        "zip-sha256": "0bb8a977931c2d9e340fe234f3ce8da67cac82bf293b11eb0e31948765be59f1",
+        "sha256": "8d45ee8e1f9f836e483e4e186f56f726cfce704a1ad04ac7a96c2da7d1ff4a61"
+    },
+    "WA.csv": {
+        "zipped": true,
+        "url": "http://results.aec.gov.au/20499/Website/External/aec-senate-formalpreferences-20499-WA.zip",
+        "inner-file": "aec-senate-formalpreferences-20499-WA.csv",
+        "zip-sha256": "969a0ea31bb1cebacb145ae76e55d0902f31b16f4c3b9c396e84e6ae39690ffc",
+        "sha256": "7612bb11f5766b168dca7d351667da08c448000e1caeca0385e98e26d3c563d8"
     }
 }

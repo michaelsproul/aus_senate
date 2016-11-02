@@ -26,7 +26,7 @@ def main():
         sources = json.load(f)
 
     # Prepare local cache of downloaded files
-    dest_dir = "datax"
+    dest_dir = "data"
     os.makedirs(dest_dir, mode=0o770, exist_ok=True)
 
     # Download/verify each required file
