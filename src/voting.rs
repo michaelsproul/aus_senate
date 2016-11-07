@@ -55,7 +55,6 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballots: I, num_cand
     // Stage 2: Winnow out the shithouse candidates until we've elected enough
     // candidates based on preferences, OR reached only two candidates.
     while result.num_elected() < num_candidates as usize {
-        assert!(vote_map.tally.len() >= 2);
         let positions_remaining = num_candidates as usize - result.num_elected();
         // If there is some number of candidates still to be elected, and all other
         // candidates have been eliminated, then elect all the remaining candidates.
