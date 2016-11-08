@@ -23,7 +23,7 @@ fn create_gvt_ballot_list(gvt: &GVT, gvt_usage: &GVTUsage, state: &str) -> Vec<I
         // with a count of 0, but absent are from the actual GVT description.
         .filter(|&(_, &vote_count)| vote_count != 0)
         // We then create a ballot with the right list of preferences from the GVT description.
-        .map(|(group, &vote_count)| Ok(MultiBallot::multi(vote_count, gvt[state][group].clone())))
+        .map(|(group, &vote_count)| Ok(Ballot::multi(vote_count, gvt[state][group].clone())))
         .collect()
 }
 
@@ -59,7 +59,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
 
     // Then extend it with the below the line votes.
     ballots.extend(btl_votes.into_iter().map(|(_, pref_map)| {
-        Ok(MultiBallot::single(flatten_pref_map(pref_map)))
+        Ok(Ballot::single(flatten_pref_map(pref_map)))
     }));
 
     let result = try!(decide_election(&candidates, ballots, 6));

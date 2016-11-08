@@ -7,11 +7,21 @@ use vote_map::*;
 use ballot_parse::*;
 use senate_result::*;
 
-pub fn compute_quota(num_votes: u32, num_senators: u32) -> Frac {
-    (frac!(num_votes) / frac!(num_senators + 1)).floor() + frac!(1)
+// Woah man.
+pub fn floor(x: Frac) -> Int {
+    let rounded = x.clone().round();
+    if x >= rounded {
+        rounded
+    } else {
+        rounded - 1
+    }
 }
 
-pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballots: I, num_candidates: u32)
+pub fn compute_quota(num_votes: u32, num_senators: u32) -> Frac {
+    floor(frac!(num_votes) / frac!(num_senators + 1)) + frac!(1)
+}
+
+pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, num_candidates: u32)
     -> Result<Senate<'a>, Box<Error>>
     where I: IntoIterator<Item=IOBallot>
 {
@@ -20,15 +30,14 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballots: I, num_cand
     // List of elected candidates, as well as algorithm statistics.
     let mut result = Senate::new();
 
-    // Map from candidate IDs to numbers of votes.
-    let mut vote_map = try!(VoteMap::new(candidates));
+    // Vector of owned ballots.
+    let mut ballots = vec![];
 
-    // Allocate first preference votes.
-    for maybe_ballot in ballots {
+    for maybe_ballot in ballot_stream {
         match maybe_ballot {
-            Ok(multi_ballot) => {
-                result.stats.record_valid_vote(&multi_ballot);
-                vote_map.add_multi_ballot(multi_ballot);
+            Ok(ballot) => {
+                result.stats.record_valid_vote();
+                ballots.push(ballot);
             }
             Err(InvalidBallot(err)) => {
                 result.stats.record_invalid_vote(err);
@@ -39,17 +48,21 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballots: I, num_cand
         };
     }
 
-    let quota = compute_quota(result.stats.num_valid_votes(), num_candidates);
+    // Map from candidate IDs to numbers of votes.
+    let mut vote_map = try!(VoteMap::new(candidates));
 
-    // List of exhausted ballots.
-    let mut exhausted_votes = vec![];
+    // Allocate first preference votes.
+    for ballot_ref in ballots.iter_mut() {
+        vote_map.add(ballot_ref);
+    }
+
+    let quota = compute_quota(result.stats.num_valid_votes(), num_candidates);
 
     // Stage 1: Elect all candidates with a full quota.
     while let Some(id) = vote_map.get_candidate_with_quota(&quota) {
         info!("Elected candidate {:?} in the first round of voting", candidates[&id]);
         result.add_senator(id, candidates);
-        let mut exhausted = vote_map.elect_candidate(id, &quota);
-        exhausted_votes.append(&mut exhausted);
+        vote_map.elect_candidate(id, &quota);
     }
 
     // Stage 2: Winnow out the shithouse candidates until we've elected enough
@@ -88,15 +101,13 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballots: I, num_cand
 
         let last_candidate = vote_map.get_last_candidate();
         info!("Eliminating candidate: {}, candidates remaining: {}", last_candidate, vote_map.tally.len());
-        let mut ex = vote_map.knock_out_candidate(last_candidate);
-        exhausted_votes.append(&mut ex);
+        vote_map.knock_out_candidate(last_candidate);
 
         // If there is now a candidate with a full quota, elect them!
         if let Some(candidate) = vote_map.get_candidate_with_quota(&quota) {
             info!("Electing candidate: {}", candidate);
             result.add_senator(candidate, candidates);
-            let mut ex = vote_map.elect_candidate(candidate, &quota);
-            exhausted_votes.append(&mut ex);
+            vote_map.elect_candidate(candidate, &quota);
         }
     }
     assert_eq!(result.num_elected(), num_candidates as usize);

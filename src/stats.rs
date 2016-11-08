@@ -1,6 +1,5 @@
 use ballot_parse::*;
 use util::*;
-use ballot::*;
 
 pub type BallotErrorMap = HashMap<InvalidBallotErr, u32>;
 
@@ -18,8 +17,9 @@ impl Stats {
         }
     }
 
-    pub fn record_valid_vote(&mut self, vote: &MultiBallot) {
-        self.num_valid_votes += vote.value;
+    // FIXME: for 2013, we need multi-votes.
+    pub fn record_valid_vote(&mut self) {
+        self.num_valid_votes += 1;
     }
 
     pub fn record_invalid_vote(&mut self, err: InvalidBallotErr) {

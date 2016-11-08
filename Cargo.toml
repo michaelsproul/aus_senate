@@ -5,11 +5,13 @@ authors = ["Michael Sproul <micsproul@gmail.com>"]
 license = "GPL-3.0+"
 
 [dependencies]
-num = "0.1"
+#num = "0.1"
 csv = "0.14.4"
 rustc-serialize = "0.3.19"
 log = "0.3"
 env_logger = "0.3"
+lazy_static = "0.1.*"
+ramp = "0.3.3"
 
 [profile.release]
 debug = true

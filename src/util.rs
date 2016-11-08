@@ -2,10 +2,12 @@ use std::io::{self, BufRead, BufReader};
 use std::fs::File;
 
 pub use std::collections::HashMap;
-pub use num::rational::Ratio;
-pub use num::*;
+pub use ramp::rational::Rational;
+pub use ramp::Int;
+//pub use num::rational::Ratio;
+//pub use num::*;
 
-pub type Frac = Ratio<BigUint>;
+pub type Frac = Rational;
 
 #[macro_export]
 macro_rules! frac {
@@ -13,7 +15,7 @@ macro_rules! frac {
         frac!($e, 1)
     };
     ($e1:expr, $e2:expr) => {
-        Ratio::new(BigUint::from($e1 as u64), BigUint::from($e2 as u64))
+        Rational::new(Int::from($e1 as u64), Int::from($e2 as u64))
     };
 }
 

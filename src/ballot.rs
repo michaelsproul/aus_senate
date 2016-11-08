@@ -1,4 +1,5 @@
 use candidate::*;
+use util::*;
 
 /// A Ballot represents an individual's order of preferences.
 #[derive(PartialEq, Eq, Hash, Debug)]
@@ -6,27 +7,44 @@ pub struct Ballot {
     /// Ordering of candidates.
     pub prefs: Vec<CandidateId>,
     /// Index of the first candidate in `prefs` who is still in the running.
-    pub current: usize
+    pub current: usize,
+    /// Ballot weighting, where None means 1.
+    pub weight: Option<Frac>,
 }
 
 impl Ballot {
-    pub fn new(prefs: Vec<CandidateId>) -> Ballot {
+    pub fn single(prefs: Vec<CandidateId>) -> Ballot {
         Ballot {
             prefs: prefs,
             current: 0,
+            weight: None,
+        }
+    }
+
+    pub fn multi(weight: u32, prefs: Vec<CandidateId>) -> Ballot {
+        Ballot {
+            prefs: prefs,
+            current: 0,
+            weight: Some(frac!(weight)),
         }
     }
 
     pub fn is_exhausted(&self) -> bool {
         self.current == self.prefs.len() - 1
     }
+
+    pub fn apply_weighting(&mut self, weighting: &Option<&Frac>) {
+        if let &Some(weighting) = weighting {
+            self.weight = match self.weight {
+                Some(ref x) => Some(x * weighting),
+                None => Some(weighting.clone())
+            };
+        }
+    }
 }
 
-/// During parsing, we sometimes know that a ballot has a value greater than 1.
-///
-/// For the main algorithm, we use a regular Ballot and a count stored in a HashMap,
-/// in order to avoid the memory overhead of storing the vote value in the MultiBallot.
-pub struct MultiBallot {
+/*
+pub struct InputBallot {
     /// Number of people that voted according to this set of preferences.
     pub value: u32,
     /// Preferences shared by everyone on this multi-ballot.
@@ -45,3 +63,4 @@ impl MultiBallot {
         }
     }
 }
+*/

@@ -32,7 +32,7 @@ pub enum InvalidBallotErr {
 /// It allows us to capture GVT multi-votes, and handle the two different types of errors:
 ///     1. Ballot parsing errors, which are recoverable (skip the ballot).
 ///     2. IO errors, CSV parsing errors, which are not recoverable (stop the algorithm).
-pub type IOBallot = Result<MultiBallot, BallotParseErr>;
+pub type IOBallot = Result<Ballot, BallotParseErr>;
 
 #[derive(Clone, Copy)]
 pub enum ChoiceConstraint {
@@ -135,7 +135,7 @@ pub fn parse_ballot_str(pref_string: &str, groups: &[Group], candidates: &[Candi
         (_, Err(_), Ok(prefs)) |
         (PreferAbove, Ok(prefs), Ok(_)) |
         (PreferBelow, Ok(_), Ok(prefs)) => {
-            Ok(MultiBallot::single(prefs))
+            Ok(Ballot::single(prefs))
         }
         (Strict, Ok(_), Ok(_)) => {
             Err(InvalidBallot(InvalidStrict))
