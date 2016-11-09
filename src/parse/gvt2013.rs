@@ -30,7 +30,7 @@ pub fn parse<R: Read>(input: R) -> Result<GVT, Box<Error>> {
     for result in reader.decode::<GVTRow>() {
         let row = try!(result);
         let ticket_map = data.entry(row.state).or_insert_with(HashMap::new);
-        let pref_map = ticket_map.entry(row.owner_ticket).or_insert_with(HashMap::new);
+        let pref_map = ticket_map.entry(row.owner_ticket).or_insert_with(BTreeMap::new);
         pref_map.insert(row.preference, row.candidate_id);
     }
 

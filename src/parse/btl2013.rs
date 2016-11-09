@@ -21,7 +21,7 @@ pub fn parse<R: Read>(input: R) -> Result<BelowTheLine, Box<Error>> {
         let vote_id = (row.batch, row.paper);
         match row.preference {
             Some(pref) => {
-                let voter_prefs = btl_votes.entry(vote_id).or_insert_with(HashMap::new);
+                let voter_prefs = btl_votes.entry(vote_id).or_insert_with(BTreeMap::new);
                 let prev = voter_prefs.insert(pref, row.candidate_id);
                 // Can't assign a single preference to more than one candidate!
                 // NOTE: this makes loads of NSW BTL ballots invalid... around 15%. Weird.

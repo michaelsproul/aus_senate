@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::BTreeMap;
 use std::cmp::Ordering;
 use std::cmp::Ordering::*;
 
@@ -32,7 +32,7 @@ pub enum InvalidBallotErr {
 /// It allows us to capture GVT multi-votes, and handle the two different types of errors:
 ///     1. Ballot parsing errors, which are recoverable (skip the ballot).
 ///     2. IO errors, CSV parsing errors, which are not recoverable (stop the algorithm).
-pub type IOBallot = Result<Ballot, BallotParseErr>;
+pub type IOBallot = Result<Ballot<u32>, BallotParseErr>;
 
 #[derive(Clone, Copy)]
 pub enum ChoiceConstraint {
@@ -147,21 +147,24 @@ pub fn parse_ballot_str(pref_string: &str, groups: &[Group], candidates: &[Candi
 }
 
 /// Mapping from preferences to candidate IDs (below the line voting).
-pub type PrefMap = HashMap<u32, CandidateId>;
+pub type PrefMap = BTreeMap<u32, CandidateId>;
 
-// Mapping from preferences to groups of candidates (above the line voting).
-pub type GroupPrefMap<'a> = HashMap<u32, &'a [CandidateId]>;
+/// Mapping from preferences to groups of candidates (above the line voting).
+pub type GroupPrefMap<'a> = BTreeMap<u32, &'a [CandidateId]>;
 
 pub fn flatten_pref_map(pref_map: PrefMap) -> Vec<CandidateId> {
-    let mut flat: Vec<_> = pref_map.into_iter().collect();
-    flat.sort();
-    flat.into_iter().map(|(_, cand)| cand).collect()
+    pref_map.values().map(|&x| x).collect()
 }
 
 pub fn flatten_group_pref_map(group_pref_map: GroupPrefMap) -> Vec<CandidateId> {
-    let mut flat: Vec<_> = group_pref_map.into_iter().collect();
-    flat.sort();
-    flat.into_iter().flat_map(|(_, candidates)| candidates).map(|&x| x).collect()
+    let size = group_pref_map.values().map(|x| x.len()).sum();
+    let mut flat = Vec::with_capacity(size);
+
+    for i in group_pref_map.keys() {
+        flat.extend_from_slice(group_pref_map[i]);
+    }
+
+    flat
 }
 
 fn create_group_pref_map<'a>(prefs: Vec<&str>, groups: &'a [Group])
@@ -180,10 +183,10 @@ fn create_pref_map(prefs: Vec<&str>, candidates: &[CandidateId])
     create_map(prefs, |idx| candidates[idx])
 }
 
-fn create_map<F, T>(prefs: Vec<&str>, func: F) -> Result<HashMap<u32, T>, BallotParseErr>
+fn create_map<F, T>(prefs: Vec<&str>, func: F) -> Result<BTreeMap<u32, T>, BallotParseErr>
     where F: Fn(usize) -> T
 {
-    let mut map = HashMap::new();
+    let mut map = BTreeMap::new();
 
     for (index, raw_pref) in prefs.iter().enumerate() {
         if raw_pref.is_empty() {
