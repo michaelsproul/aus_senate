@@ -9,7 +9,7 @@ lazy_static! {
 /// Intermediate data structure mapping candidates to ballots.
 pub struct VoteMap<'a> {
     pub tally: HashMap<CandidateId, Frac>,
-    pub map: HashMap<CandidateId, Vec<&'a mut Ballot>>
+    pub map: HashMap<CandidateId, Vec<&'a mut Ballot<Frac>>>
 }
 
 impl <'a> VoteMap<'a> {
@@ -31,23 +31,17 @@ impl <'a> VoteMap<'a> {
     }
 
     /// Add votes to a candidate's tally according to the weight and current preference of a ballot.
-    pub fn add(&mut self, ballot: &'a mut Ballot) {
+    pub fn add(&mut self, ballot: &'a mut Ballot<Frac>) {
         let candidate = ballot.prefs[ballot.current];
 
         // Add to the candidate's tally.
-        let mut vote_count = self.tally.get_mut(&candidate).expect(&format!("Candidate not found: {}", candidate));
+        let mut vote_count = self.tally.get_mut(&candidate).expect("Candidate not found");
         *vote_count += ballot.weight.as_ref().unwrap_or_else(|| &ONE);
 
         // Add the ballot to the candidate's bucket.
         let mut bucket = self.map.get_mut(&candidate).unwrap();
         bucket.push(ballot);
     }
-
-    /*
-    pub fn add_multi_ballot(&mut self, MultiBallot { ballot, value }: MultiBallot) {
-        self.add(ballot, &frac!(value));
-    }
-    */
 
     /// Get the ID of a candidate whose vote exceeds the given quota.
     pub fn get_candidate_with_quota(&self, quota: &Frac) -> Option<CandidateId> {
@@ -59,7 +53,7 @@ impl <'a> VoteMap<'a> {
         self.tally.iter().min_by_key(|&(_, v)| v).map(|(&c, _)| c).unwrap()
     }
 
-    pub fn find_next_valid_preference(&self, b: &Ballot) -> Option<usize> {
+    pub fn find_next_valid_preference(&self, b: &Ballot<Frac>) -> Option<usize> {
         for (i, cand) in b.prefs[b.current .. ].iter().enumerate() {
             if self.tally.get(cand).is_some() {
                 return Some(b.current + i);

@@ -4,8 +4,6 @@ use std::fs::File;
 pub use std::collections::HashMap;
 pub use ramp::rational::Rational;
 pub use ramp::Int;
-//pub use num::rational::Ratio;
-//pub use num::*;
 
 pub type Frac = Rational;
 

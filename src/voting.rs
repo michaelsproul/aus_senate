@@ -7,7 +7,7 @@ use vote_map::*;
 use ballot_parse::*;
 use senate_result::*;
 
-// Woah man.
+// HACK: should use ramp's floor once implemented.
 pub fn floor(x: Frac) -> Int {
     let rounded = x.clone().round();
     if x >= rounded {
@@ -36,8 +36,8 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
     for maybe_ballot in ballot_stream {
         match maybe_ballot {
             Ok(ballot) => {
-                result.stats.record_valid_vote();
-                ballots.push(ballot);
+                result.stats.record_valid_vote(&ballot);
+                ballots.push(ballot.to_fractional());
             }
             Err(InvalidBallot(err)) => {
                 result.stats.record_invalid_vote(err);
