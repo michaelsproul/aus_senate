@@ -1,6 +1,7 @@
 use ballot::*;
 use candidate::*;
 use util::*;
+use arith::*;
 
 lazy_static! {
     static ref ONE: Frac = frac!(1);
@@ -62,27 +63,31 @@ impl <'a> VoteMap<'a> {
         None
     }
 
-    /// Redistribute the votes for the given candidate.
-    /// Transfer value should be 1 if the candidate is being knocked out,
-    /// or the (vote - quota) / (vote) if the candidate has been elected.
     fn redistribute_votes(&mut self, candidate: CandidateId, transfer_value: Option<&Frac>) {
         let ballots = self.map.remove(&candidate).unwrap();
         self.tally.remove(&candidate).unwrap();
 
-        for ballot in ballots {
-            if let Some(i) = self.find_next_valid_preference(&ballot) {
-                ballot.current = i;
-                ballot.apply_weighting(&transfer_value);
-                self.add(ballot);
-            }
+        let grouped_ballots = group_by_candidate(&*self, ballots, transfer_value);
+        let tallies = compute_tallies(&grouped_ballots);
+
+        for (candidate, ballots) in grouped_ballots {
+            let mut bucket = self.map.get_mut(&candidate).unwrap();
+            bucket.extend(ballots);
+        }
+
+        for (candidate, vote_update) in tallies {
+            let mut vote_count = self.tally.get_mut(&candidate).unwrap();
+            *vote_count += vote_update;
+            vote_count.normalize();
         }
     }
 
     pub fn elect_candidate(&mut self, candidate: CandidateId, quota: &Frac) {
-        let transfer_value = {
+        let mut transfer_value = {
             let num_votes = &self.tally[&candidate];
             (num_votes - quota) / num_votes
         };
+        transfer_value.normalize();
         trace!("Transferring at value: {}", transfer_value);
         self.redistribute_votes(candidate, Some(&transfer_value))
     }

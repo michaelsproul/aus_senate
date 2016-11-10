@@ -43,14 +43,3 @@ impl Ballot<u32> {
         }
     }
 }
-
-impl Ballot<Frac> {
-    pub fn apply_weighting(&mut self, weighting: &Option<&Frac>) {
-        if let &Some(weighting) = weighting {
-            self.weight = match self.weight {
-                Some(ref x) => Some(x * weighting),
-                None => Some(weighting.clone())
-            };
-        }
-    }
-}
