@@ -13,6 +13,7 @@ extern crate rustc_serialize;
 extern crate ramp;
 
 #[macro_use]
+pub mod transfer_value;
 pub mod util;
 pub mod candidate;
 pub mod group;
@@ -24,4 +25,3 @@ pub mod parse;
 pub mod senate_result;
 pub mod stats;
 pub mod arith;
-pub mod memo;

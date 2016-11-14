@@ -7,18 +7,8 @@ use vote_map::*;
 use ballot_parse::*;
 use senate_result::*;
 
-// HACK: should use ramp's floor once implemented.
-pub fn floor(x: Frac) -> Int {
-    let rounded = x.clone().round();
-    if x >= rounded {
-        rounded
-    } else {
-        rounded - 1
-    }
-}
-
-pub fn compute_quota(num_votes: u32, num_senators: u32) -> Frac {
-    floor(frac!(num_votes) / frac!(num_senators + 1)) + frac!(1)
+pub fn compute_quota(num_votes: u32, num_senators: u32) -> u32 {
+    (num_votes / (num_senators + 1)) + 1
 }
 
 pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, num_candidates: u32)
@@ -37,7 +27,7 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
         match maybe_ballot {
             Ok(ballot) => {
                 result.stats.record_valid_vote(&ballot);
-                ballots.push(ballot.to_fractional());
+                ballots.push(ballot);
             }
             Err(InvalidBallot(err)) => {
                 result.stats.record_invalid_vote(err);
@@ -59,10 +49,10 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
     let quota = compute_quota(result.stats.num_valid_votes(), num_candidates);
 
     // Stage 1: Elect all candidates with a full quota.
-    while let Some(id) = vote_map.get_candidate_with_quota(&quota) {
+    while let Some(id) = vote_map.get_candidate_with_quota(quota) {
         info!("Elected candidate {:?} in the first round of voting", candidates[&id]);
         result.add_senator(id, candidates);
-        vote_map.elect_candidate(id, &quota);
+        vote_map.elect_candidate(id, quota);
     }
 
     // Stage 2: Winnow out the shithouse candidates until we've elected enough
@@ -104,10 +94,10 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
         vote_map.knock_out_candidate(last_candidate);
 
         // If there is now a candidate with a full quota, elect them!
-        if let Some(candidate) = vote_map.get_candidate_with_quota(&quota) {
+        if let Some(candidate) = vote_map.get_candidate_with_quota(quota) {
             info!("Electing candidate: {}", candidate);
             result.add_senator(candidate, candidates);
-            vote_map.elect_candidate(candidate, &quota);
+            vote_map.elect_candidate(candidate, quota);
         }
     }
     assert_eq!(result.num_elected(), num_candidates as usize);
