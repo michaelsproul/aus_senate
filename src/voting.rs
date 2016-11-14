@@ -7,18 +7,8 @@ use vote_map::*;
 use ballot_parse::*;
 use senate_result::*;
 
-// HACK: should use ramp's floor once implemented.
-pub fn floor(x: Frac) -> Int {
-    let rounded = x.clone().round();
-    if x >= rounded {
-        rounded
-    } else {
-        rounded - 1
-    }
-}
-
 pub fn compute_quota(num_votes: u32, num_senators: u32) -> Frac {
-    floor(frac!(num_votes) / frac!(num_senators + 1)) + frac!(1)
+    Frac::ratio(&frac!(num_votes, num_senators + 1).floor(), &Int::from(1)) + frac!(1)
 }
 
 pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, num_candidates: u32)

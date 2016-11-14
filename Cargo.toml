@@ -10,7 +10,8 @@ rustc-serialize = "0.3.19"
 log = "0.3"
 env_logger = "0.3"
 lazy_static = "0.1.*"
-ramp = "0.3.3"
+#ramp = "0.3.3"
+rust-gmp = { git = "https://github.com/michaelsproul/rust-gmp.git", branch = "floor-ceil" }
 
 [profile.release]
 debug = true

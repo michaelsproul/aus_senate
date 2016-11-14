@@ -23,7 +23,7 @@ impl <'a> MultMemo<'a> {
         }
 
         let mut result = x * y;
-        result.normalize();
+        //result.normalize();
 
         self.values.insert(x.clone(), result.clone());
 

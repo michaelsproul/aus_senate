@@ -2,10 +2,15 @@ use std::io::{self, BufRead, BufReader};
 use std::fs::File;
 
 pub use std::collections::HashMap;
+/*
 pub use ramp::rational::Rational;
 pub use ramp::Int;
+*/
+pub use gmp::mpz::Mpz;
+pub use gmp::mpq::Mpq;
 
-pub type Frac = Rational;
+pub type Int = Mpz;
+pub type Frac = Mpq;
 
 #[macro_export]
 macro_rules! frac {
@@ -13,7 +18,7 @@ macro_rules! frac {
         frac!($e, 1)
     };
     ($e1:expr, $e2:expr) => {
-        Rational::new(Int::from($e1 as u64), Int::from($e2 as u64))
+        Mpq::ratio(&Mpz::from($e1 as u64), &Mpz::from($e2 as u64))
     };
 }
 

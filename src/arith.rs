@@ -59,10 +59,10 @@ fn compute_single_tally<'a>(ballots: &[&'a mut Ballot<Frac>]) -> Frac {
     }
 
     let sum = freq_map.into_iter().fold(frac!(0), |acc, (weight, count)| {
-        acc + weight * Int::from(count)
+        acc + weight * frac!(count)
     });
 
-    let result = sum + Int::from(ones);
+    let result = sum + frac!(ones);
     //result.normalize();
     result
 }
