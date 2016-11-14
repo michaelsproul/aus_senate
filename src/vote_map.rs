@@ -3,14 +3,16 @@ use candidate::*;
 use util::*;
 use arith::*;
 
+/*
 lazy_static! {
     static ref ONE: Frac = frac!(1);
 }
+*/
 
 /// Intermediate data structure mapping candidates to ballots.
 pub struct VoteMap<'a> {
     pub tally: HashMap<CandidateId, Frac>,
-    pub map: HashMap<CandidateId, Vec<&'a mut Ballot<Frac>>>
+    pub map: HashMap<CandidateId, Vec<&'a mut Ballot<Frac>>>,
 }
 
 impl <'a> VoteMap<'a> {
@@ -37,7 +39,8 @@ impl <'a> VoteMap<'a> {
 
         // Add to the candidate's tally.
         let mut vote_count = self.tally.get_mut(&candidate).expect("Candidate not found");
-        *vote_count += ballot.weight.as_ref().unwrap_or_else(|| &ONE);
+        let one = frac!(1);
+        *vote_count = &*vote_count + ballot.weight.as_ref().unwrap_or_else(|| &one);
 
         // Add the ballot to the candidate's bucket.
         let mut bucket = self.map.get_mut(&candidate).unwrap();
@@ -77,8 +80,8 @@ impl <'a> VoteMap<'a> {
 
         for (candidate, vote_update) in tallies {
             let mut vote_count = self.tally.get_mut(&candidate).unwrap();
-            *vote_count += vote_update;
-            vote_count.normalize();
+            *vote_count = &*vote_count + vote_update;
+            //vote_count.normalize();
         }
     }
 
@@ -87,8 +90,8 @@ impl <'a> VoteMap<'a> {
             let num_votes = &self.tally[&candidate];
             (num_votes - quota) / num_votes
         };
-        transfer_value.normalize();
-        trace!("Transferring at value: {}", transfer_value);
+        //transfer_value.normalize();
+        trace!("Transferring at value: {:?}", transfer_value);
         self.redistribute_votes(candidate, Some(&transfer_value))
     }
 

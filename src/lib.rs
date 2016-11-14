@@ -10,7 +10,8 @@ extern crate log;
 extern crate env_logger;
 extern crate csv;
 extern crate rustc_serialize;
-extern crate ramp;
+//extern crate ramp;
+extern crate gmp;
 
 #[macro_use]
 pub mod util;
