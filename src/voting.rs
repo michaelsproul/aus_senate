@@ -7,8 +7,8 @@ use vote_map::*;
 use ballot_parse::*;
 use senate_result::*;
 
-pub fn compute_quota(num_votes: u32, num_senators: u32) -> Frac {
-    Frac::ratio(&frac!(num_votes, num_senators + 1).floor(), &Int::from(1)) + frac!(1)
+pub fn compute_quota(num_votes: u32, num_senators: u32) -> Int {
+    frac!(num_votes, num_senators + 1).ceil()
 }
 
 pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, num_candidates: u32)

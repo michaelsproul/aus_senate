@@ -3,12 +3,6 @@ use candidate::*;
 use util::*;
 use arith::*;
 
-/*
-lazy_static! {
-    static ref ONE: Frac = frac!(1);
-}
-*/
-
 /// Map from transfer values to ballots with that transfer value.
 pub type TransferMap<'a> = BTreeMap<Frac, Vec<&'a mut Ballot>>;
 
@@ -17,7 +11,7 @@ pub type BallotMap<'a> = HashMap<CandidateId, TransferMap<'a>>;
 
 /// Intermediate data structure mapping candidates to ballots.
 pub struct VoteMap<'a> {
-    pub tally: HashMap<CandidateId, Frac>,
+    pub tally: HashMap<CandidateId, Int>,
     pub map: BallotMap<'a>,
     pub one: Frac,
 }
@@ -36,7 +30,7 @@ impl <'a> VoteMap<'a> {
             one: frac!(1),
         };
         for &id in candidates.keys() {
-            let e1 = v.tally.insert(id, frac!(0));
+            let e1 = v.tally.insert(id, Int::from(0));
             let e2 = v.map.insert(id, new_transfer_map(v.one.clone()));
             if e1.is_some() || e2.is_some() {
                 return Err(format!("Candidate ID {} appears more than once", id));
@@ -55,7 +49,7 @@ impl <'a> VoteMap<'a> {
         let tally = &mut self.tally;
         let one = &self.one;
         let mut vote_count = tally.get_mut(&candidate).expect("Candidate not found");
-        *vote_count = &*vote_count + frac!(ballot.weight);
+        *vote_count = &*vote_count + Int::from(ballot.weight);
 
         // Add the ballot to the candidate's bucket.
         let mut ballot_map = self.map.get_mut(&candidate).unwrap();
@@ -64,7 +58,7 @@ impl <'a> VoteMap<'a> {
     }
 
     /// Get the ID of a candidate whose vote exceeds the given quota.
-    pub fn get_candidate_with_quota(&self, quota: &Frac) -> Option<CandidateId> {
+    pub fn get_candidate_with_quota(&self, quota: &Int) -> Option<CandidateId> {
         let mut candidates_with_quota = self.tally.iter()
             .filter(|&(_, votes)| votes >= quota)
             .collect::<Vec<_>>();
@@ -110,10 +104,10 @@ impl <'a> VoteMap<'a> {
         }
     }
 
-    pub fn elect_candidate(&mut self, candidate: CandidateId, quota: &Frac) {
+    pub fn elect_candidate(&mut self, candidate: CandidateId, quota: &Int) {
         let transfer_value = {
             let num_votes = &self.tally[&candidate];
-            (num_votes - quota) / num_votes
+            Frac::ratio(&(num_votes - quota), &num_votes)
         };
         //transfer_value.normalize();
         trace!("Transferring at value: {:?}", transfer_value);

@@ -30,20 +30,19 @@ pub fn group_by_candidate<'a>(vote_map: &VoteMap<'a>, all_ballots: TransferMap<'
     map
 }
 
-pub fn compute_tallies<'a>(ballot_map: &BallotMap<'a>) -> HashMap<CandidateId, Frac> {
+pub fn compute_tallies<'a>(ballot_map: &BallotMap<'a>) -> HashMap<CandidateId, Int> {
     ballot_map.iter()
         .map(|(&k, v)| (k, compute_single_tally(v)))
         .collect()
 }
 
-pub fn compute_single_tally<'a>(transfer_map: &TransferMap<'a>) -> Frac {
-    let mut total = frac!(0);
+pub fn compute_single_tally<'a>(transfer_map: &TransferMap<'a>) -> Int {
+    let mut total = Int::from(0);
 
     for (transfer_val, ballots) in transfer_map {
         let num_ballots: u32 = ballots.iter().map(|b| b.weight).sum();
-        // TODO: floor here.
         let vote_update = transfer_val * frac!(num_ballots);
-        total = total + vote_update;
+        total = total + vote_update.floor();
     }
 
     total
