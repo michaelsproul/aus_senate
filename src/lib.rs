@@ -25,4 +25,3 @@ pub mod parse;
 pub mod senate_result;
 pub mod stats;
 pub mod arith;
-pub mod memo;

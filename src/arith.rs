@@ -1,68 +1,50 @@
 use candidate::*;
-use ballot::*;
 use util::*;
 use vote_map::*;
-use memo::*;
 
-use std::collections::BTreeMap;
+pub fn group_by_candidate<'a>(vote_map: &VoteMap<'a>, all_ballots: TransferMap<'a>, new_transfer_value: &Option<Frac>) -> BallotMap<'a> {
+    let mut map = BallotMap::new();
 
-pub type TransferMap<'a> = HashMap<CandidateId, Vec<&'a mut Ballot<Frac>>>;
+    for (mut transfer_val, ballots) in all_ballots {
+        // Multiply the old transfer value by the new one.
+        if let &Some(ref ntv) = new_transfer_value {
+            transfer_val = transfer_val * ntv;
+        }
 
-pub fn group_by_candidate<'a, 'b>(vote_map: &VoteMap<'b>, ballots: Vec<&'a mut Ballot<Frac>>, transfer_value: Option<&Frac>) -> TransferMap<'a> {
-    let mut map = HashMap::new();
+        // Allocate ballots per candidate, and bucket them by transfer value.
+        for ballot in ballots {
+            if let Some(i) = vote_map.find_next_valid_preference(&ballot) {
+                ballot.current = i;
 
-    let mut memo = MultMemo::new(transfer_value);
+                let candidate = ballot.prefs[ballot.current];
 
-    for ballot in ballots {
-        if let Some(i) = vote_map.find_next_valid_preference(&ballot) {
-            ballot.current = i;
+                let mut transfer_map = map.entry(candidate).or_insert_with(TransferMap::new);
 
-            if let Some(update) = memo.mult(ballot.weight.as_ref()) {
-                ballot.weight = Some(update);
+                // FIXME: this is inefficient, use Frac interning.
+                let mut bucket = transfer_map.entry(transfer_val.clone()).or_insert_with(Vec::new);
+                bucket.push(ballot);
             }
-
-            let candidate = ballot.prefs[ballot.current];
-
-            let mut bucket = map.entry(candidate).or_insert_with(Vec::new);
-            bucket.push(ballot);
         }
     }
-
-    info!("# of multiplication hits: {}", memo.hits);
 
     map
 }
 
-pub fn compute_tallies<'a>(tmap: &TransferMap<'a>) -> HashMap<CandidateId, Frac> {
-    tmap.iter()
-        .map(|(&k, v)| (k, compute_single_tally(&v)))
+pub fn compute_tallies<'a>(ballot_map: &BallotMap<'a>) -> HashMap<CandidateId, Frac> {
+    ballot_map.iter()
+        .map(|(&k, v)| (k, compute_single_tally(v)))
         .collect()
 }
 
-// Compute the tally change for a single candidate using some clever tricks.
-fn compute_single_tally<'a>(ballots: &[&'a mut Ballot<Frac>]) -> Frac {
-    // Group by the number of occurrences of each weighting.
-    let mut freq_map: BTreeMap<&Frac, u32> = BTreeMap::new();
+pub fn compute_single_tally<'a>(transfer_map: &TransferMap<'a>) -> Frac {
+    let mut total = frac!(0);
 
-    let mut ones = 0;
-
-    for ballot in ballots {
-        match ballot.weight {
-            Some(ref weight) => {
-                let mut freq = freq_map.entry(weight).or_insert(0);
-                *freq += 1;
-            }
-            None => {
-                ones += 1;
-            }
-        }
+    for (transfer_val, ballots) in transfer_map {
+        let num_ballots: u32 = ballots.iter().map(|b| b.weight).sum();
+        // TODO: floor here.
+        let vote_update = transfer_val * frac!(num_ballots);
+        total = total + vote_update;
     }
 
-    let sum = freq_map.into_iter().fold(frac!(0), |acc, (weight, count)| {
-        acc + weight * frac!(count)
-    });
-
-    let result = sum + frac!(ones);
-    //result.normalize();
-    result
+    total
 }

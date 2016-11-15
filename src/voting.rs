@@ -27,7 +27,7 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
         match maybe_ballot {
             Ok(ballot) => {
                 result.stats.record_valid_vote(&ballot);
-                ballots.push(ballot.to_fractional());
+                ballots.push(ballot);
             }
             Err(InvalidBallot(err)) => {
                 result.stats.record_invalid_vote(err);

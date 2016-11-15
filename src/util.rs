@@ -1,11 +1,7 @@
 use std::io::{self, BufRead, BufReader};
 use std::fs::File;
 
-pub use std::collections::HashMap;
-/*
-pub use ramp::rational::Rational;
-pub use ramp::Int;
-*/
+pub use std::collections::{HashMap, BTreeMap};
 pub use gmp::mpz::Mpz;
 pub use gmp::mpq::Mpq;
 
