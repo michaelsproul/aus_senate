@@ -65,7 +65,13 @@ impl <'a> VoteMap<'a> {
 
     /// Get the ID of a candidate whose vote exceeds the given quota.
     pub fn get_candidate_with_quota(&self, quota: &Frac) -> Option<CandidateId> {
-        self.tally.iter().filter(|&(_, votes)| votes >= quota).map(|(&c, _)| c).next()
+        let mut candidates_with_quota = self.tally.iter()
+            .filter(|&(_, votes)| votes >= quota)
+            .collect::<Vec<_>>();
+
+        candidates_with_quota.sort_by_key(|&(_, votes)| votes);
+
+        candidates_with_quota.last().map(|&(&candidate, _)| candidate)
     }
 
     /// Get the ID of the candidate with the least votes.
