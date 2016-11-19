@@ -83,6 +83,7 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
             let last_two: Vec<_> = vote_map.tally.drain().collect();
             let (c1, ref v1) = last_two[0];
             let (c2, ref v2) = last_two[1];
+            trace!("Two-way contest between {} and {}", c1, c2);
             let winner = match Ord::cmp(v1, v2) {
                 Equal => {
                     result.tied = true;
