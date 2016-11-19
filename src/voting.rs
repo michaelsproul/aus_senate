@@ -46,6 +46,14 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
         vote_map.add(ballot_ref);
     }
 
+    // Exclude family first in South Australia.
+    let bob_day = 1346;
+    let lucy_gichuhi = 1347;
+    if vote_map.map.contains_key(&bob_day) {
+        vote_map.knock_out_candidate(bob_day);
+        vote_map.knock_out_candidate(lucy_gichuhi);
+    }
+
     let quota = compute_quota(result.stats.num_valid_votes(), num_candidates);
 
     // Stage 1: Elect all candidates with a full quota.
