@@ -30,6 +30,7 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
                 ballots.push(ballot);
             }
             Err(InvalidBallot(err)) => {
+                // TODO: make ballot parsing errors a hard failure.
                 result.stats.record_invalid_vote(err);
             }
             Err(InputError(e)) => {

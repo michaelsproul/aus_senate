@@ -188,11 +188,16 @@ fn create_map<F, T>(prefs: Vec<&str>, func: F) -> Result<BTreeMap<u32, T>, Ballo
 {
     let mut map = BTreeMap::new();
 
-    for (index, raw_pref) in prefs.iter().enumerate() {
+    for (index, &raw_pref) in prefs.iter().enumerate() {
         if raw_pref.is_empty() {
             continue;
         }
-        let pref = try!(raw_pref.parse::<u32>().map_err(|_| InvalidBallot(InvalidCharacter)));
+        let pref = if raw_pref == "*" || raw_pref == "/" {
+            1
+        } else {
+            try!(raw_pref.parse::<u32>().map_err(|_| InvalidBallot(InvalidCharacter)))
+        };
+
         let value = func(index);
         map.insert(pref, value);
     }
