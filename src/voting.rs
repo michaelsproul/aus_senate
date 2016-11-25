@@ -49,10 +49,24 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
 
     let quota = compute_quota(result.stats.num_valid_votes(), num_candidates);
 
+    info!("Quota: {}", quota);
+
     // Stage 1: Elect all candidates with a full quota.
-    while let Some(id) = vote_map.get_candidate_with_quota(&quota) {
-        info!("Elected candidate {:?} in the first round of voting", candidates[&id]);
-        result.add_senator(id, candidates);
+    let elected_on_first_prefs = vote_map.get_candidates_with_quota(&quota);
+
+    // Elect them all.
+    for &id in &elected_on_first_prefs {
+        let votes = vote_map.get_tally(id);
+        info!("Elected candidate {:?} in the first round of voting with {} votes",
+            candidates[&id],
+            votes
+        );
+        result.add_senator(id, votes, candidates);
+    }
+
+    // Distribute their preferences.
+    for &id in &elected_on_first_prefs {
+        // TODO: optimize by removing candidates in bulk (don't transfer to each other).
         vote_map.elect_candidate(id, &quota);
     }
 
@@ -63,8 +77,8 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
         // If there is some number of candidates still to be elected, and all other
         // candidates have been eliminated, then elect all the remaining candidates.
         if vote_map.tally.len() == positions_remaining {
-            for (id, _) in vote_map.tally.drain() {
-                result.add_senator(id, candidates);
+            for (id, votes) in vote_map.tally.drain() {
+                result.add_senator(id, votes, candidates);
             }
             break;
         }
@@ -73,20 +87,20 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
         // try to elect the candidate with the majority.
         if vote_map.tally.len() == 2 {
             assert_eq!(positions_remaining, 1);
-            let last_two: Vec<_> = vote_map.tally.drain().collect();
-            let (c1, ref v1) = last_two[0];
-            let (c2, ref v2) = last_two[1];
-            let winner = match Ord::cmp(v1, v2) {
+            let mut last_two: Vec<_> = vote_map.tally.drain().collect();
+            let (c1, v1) = last_two.pop().unwrap();
+            let (c2, v2) = last_two.pop().unwrap();
+            let (winner, winner_votes) = match Ord::cmp(&v1, &v2) {
                 Equal => {
                     result.tied = true;
-                    result.add_senator(c1, candidates);
-                    result.add_senator(c2, candidates);
+                    result.add_senator(c1, v1, candidates);
+                    result.add_senator(c2, v2, candidates);
                     return Ok(result);
                 }
-                Greater => c1,
-                Less => c2,
+                Greater => (c1, v1),
+                Less => (c2, v2),
             };
-            result.add_senator(winner, candidates);
+            result.add_senator(winner, winner_votes, candidates);
             break;
         }
 
@@ -96,11 +110,13 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
 
         // If there is now a candidate with a full quota, elect them!
         if let Some(candidate) = vote_map.get_candidate_with_quota(&quota) {
-            info!("Electing candidate: {}", candidate);
-            result.add_senator(candidate, candidates);
+            let votes = vote_map.get_tally(candidate);
+            info!("Electing candidate: {} with {} votes", candidate, votes);
+            result.add_senator(candidate, votes, candidates);
             vote_map.elect_candidate(candidate, &quota);
         }
     }
+
     assert_eq!(result.num_elected(), num_candidates as usize);
 
     Ok(result)

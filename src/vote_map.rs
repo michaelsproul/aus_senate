@@ -57,20 +57,31 @@ impl <'a> VoteMap<'a> {
         bucket.push(ballot);
     }
 
-    /// Get the ID of a candidate whose vote exceeds the given quota.
-    pub fn get_candidate_with_quota(&self, quota: &Int) -> Option<CandidateId> {
+    /// Get the IDs of all candidates who vote exceeds the quota.
+    pub fn get_candidates_with_quota(&self, quota: &Int) -> Vec<CandidateId> {
         let mut candidates_with_quota = self.tally.iter()
             .filter(|&(_, votes)| votes >= quota)
             .collect::<Vec<_>>();
 
-        candidates_with_quota.sort_by_key(|&(_, votes)| votes);
+        // Sort by vote descending.
+        candidates_with_quota.sort_by(|&(_, v1), &(_, v2)| v1.cmp(v2).reverse());
 
-        candidates_with_quota.last().map(|&(&candidate, _)| candidate)
+        candidates_with_quota.into_iter().map(|(c, _)| *c).collect()
+    }
+
+    /// Get the ID of a candidate whose vote exceeds the given quota.
+    pub fn get_candidate_with_quota(&self, quota: &Int) -> Option<CandidateId> {
+        self.get_candidates_with_quota(quota).first().cloned()
     }
 
     /// Get the ID of the candidate with the least votes.
     pub fn get_last_candidate(&self) -> CandidateId {
         self.tally.iter().min_by_key(|&(_, v)| v).map(|(&c, _)| c).unwrap()
+    }
+
+    /// Get the integer tally for a candidate (assuming they're in the map).
+    pub fn get_tally(&self, candidate: CandidateId) -> Int {
+        self.tally.get(&candidate).unwrap().clone()
     }
 
     pub fn find_next_valid_preference(&self, b: &Ballot) -> Option<usize> {

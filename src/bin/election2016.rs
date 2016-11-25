@@ -118,8 +118,9 @@ fn main_with_result() -> Result<(), Box<Error>> {
 
     let election_result = try!(decide_election(&candidates, ballots_iter, num_candidates));
 
-    for c in election_result.senators.iter() {
-        println!("Elected: {} {} ({})", c.other_names, c.surname, c.party);
+    println!("=== Elected ===");
+    for &(c, ref votes) in election_result.senators.iter() {
+        println!("{} {} ({}) [{} votes]", c.other_names, c.surname, c.party, votes);
     }
 
     if election_result.tied {

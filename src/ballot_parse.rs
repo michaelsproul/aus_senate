@@ -1,5 +1,5 @@
 use std::collections::BTreeMap;
-use std::cmp::Ordering;
+use std::cmp::{Ordering, min};
 use std::cmp::Ordering::*;
 
 use ballot::*;
@@ -12,6 +12,7 @@ pub use self::InvalidBallotErr::*;
 pub use self::ChoiceConstraint::*;
 pub use self::CountConstraint::*;
 
+#[derive(Debug)]
 pub enum BallotParseErr {
     InvalidBallot(InvalidBallotErr),
     InputError(Box<Error>),
@@ -24,7 +25,8 @@ pub enum InvalidBallotErr {
     InvalidMaxAbove(usize),
     InvalidMinBelow(usize),
     InvalidMaxBelow(usize),
-    InvalidStrict
+    InvalidStrict,
+    EmptyBallot
 }
 
 /// This type is yielded from iterators used during ballot parsing.
@@ -55,18 +57,11 @@ pub struct Constraints {
 }
 
 impl Constraints {
-    pub fn strict2016() -> Constraints {
-        Constraints {
-            choice: Strict,
-            counts: vec![MinAbove(6), MinBelow(12)]
-        }
-    }
-
+    // Preferring below the line votes is codified in Section 269(2) of the Electoral Act.
     pub fn lax2016() -> Constraints {
         Constraints {
-            // Somewhat arbitrary.
             choice: PreferBelow,
-            counts: vec![MinAbove(1), MinBelow(1)]
+            counts: vec![MinAbove(1), MinBelow(6)]
         }
     }
 
@@ -118,15 +113,40 @@ impl Constraints {
     }
 }
 
+fn remove_repeats_and_gaps<T>((mut map, cutoff): BallotRes<T>)
+    -> Result<BTreeMap<u32, T>, BallotParseErr>
+{
+    // Search for a gap in the order of preferences.
+    let missing_pref = map.keys().zip(1..).find(|&(&pref, idx)| pref != idx).map(|(_, idx)| idx);
+
+    // Cut-off at the minimum of the provided cutoff (for doubled prefs) and any missing pref.
+    let new_cutoff = match (cutoff, missing_pref) {
+        (Some(prev), Some(new)) => Some(min(prev, new)),
+        (x @ Some(_), _) | (_, x) => x
+    };
+
+    if let Some(cut) = new_cutoff {
+        map.split_off(&cut);
+    }
+
+    if map.len() > 0 {
+        Ok(map)
+    } else {
+        Err(InvalidBallot(EmptyBallot))
+    }
+}
+
 pub fn parse_ballot_str(pref_string: &str, groups: &[Group], candidates: &[CandidateId], constraints: &Constraints)
 -> IOBallot {
     let mut above_str: Vec<&str> = pref_string.split(',').collect();
     let below_str = above_str.split_off(groups.len());
 
     let above_the_line = create_group_pref_map(above_str, groups)
+        .and_then(remove_repeats_and_gaps)
         .and_then(|v| constraints.check_above(v))
         .map(flatten_group_pref_map);
     let below_the_line = create_pref_map(below_str, candidates)
+        .and_then(remove_repeats_and_gaps)
         .and_then(|v| constraints.check_below(v))
         .map(flatten_pref_map);
 
@@ -152,6 +172,9 @@ pub type PrefMap = BTreeMap<u32, CandidateId>;
 /// Mapping from preferences to groups of candidates (above the line voting).
 pub type GroupPrefMap<'a> = BTreeMap<u32, &'a [CandidateId]>;
 
+/// Ballot parse result including a map, and an optional preference cut off.
+type BallotRes<T> = (BTreeMap<u32, T>, Option<u32>);
+
 pub fn flatten_pref_map(pref_map: PrefMap) -> Vec<CandidateId> {
     pref_map.values().map(|&x| x).collect()
 }
@@ -168,7 +191,7 @@ pub fn flatten_group_pref_map(group_pref_map: GroupPrefMap) -> Vec<CandidateId> 
 }
 
 fn create_group_pref_map<'a>(prefs: Vec<&str>, groups: &'a [Group])
-    -> Result<GroupPrefMap<'a>, BallotParseErr>
+    -> Result<BallotRes<&'a [CandidateId]>, BallotParseErr>
 {
     let group_candidates = |idx| {
         let group: &'a Group = &groups[idx];
@@ -178,29 +201,55 @@ fn create_group_pref_map<'a>(prefs: Vec<&str>, groups: &'a [Group])
 }
 
 fn create_pref_map(prefs: Vec<&str>, candidates: &[CandidateId])
-    -> Result<PrefMap, BallotParseErr>
+    -> Result<BallotRes<CandidateId>, BallotParseErr>
 {
     create_map(prefs, |idx| candidates[idx])
 }
 
-fn create_map<F, T>(prefs: Vec<&str>, func: F) -> Result<BTreeMap<u32, T>, BallotParseErr>
+fn create_map<F, T>(prefs: Vec<&str>, func: F) -> Result<BallotRes<T>, BallotParseErr>
     where F: Fn(usize) -> T
 {
     let mut map = BTreeMap::new();
+    let mut pref_cutoff = None;
 
     for (index, &raw_pref) in prefs.iter().enumerate() {
-        if raw_pref.is_empty() {
-            continue;
-        }
-        let pref = if raw_pref == "*" || raw_pref == "/" {
-            1
-        } else {
-            try!(raw_pref.parse::<u32>().map_err(|_| InvalidBallot(InvalidCharacter)))
+
+        let pref = match raw_pref {
+            "" => continue,
+            "*" | "/" => 1,
+            _ => try!(raw_pref.parse::<u32>().map_err(|_| InvalidBallot(InvalidCharacter)))
         };
 
         let value = func(index);
-        map.insert(pref, value);
+        let prev_value = map.insert(pref, value);
+
+        // If a preference is repeated, we ignore that preference and any
+        // higher numbered preferences.
+        // Sections 268A(2)(b)(i) and 269(1A)(b)(i).
+        if prev_value.is_some() {
+            pref_cutoff = Some(match pref_cutoff {
+                Some(cutoff) => min(cutoff, pref),
+                None => pref
+            });
+        }
     }
 
-    Ok(map)
+    Ok((map, pref_cutoff))
+}
+
+#[cfg(test)]
+mod test {
+    use super::remove_repeats_and_gaps;
+    use std::collections::BTreeMap;
+    use std::iter::FromIterator;
+
+    #[test]
+    fn remove_gaps() {
+        let mut pref_map = BTreeMap::from_iter((1..10).zip(1..10));
+        pref_map.insert(11, 11);
+
+        assert_eq!(remove_repeats_and_gaps((pref_map.clone(), None)).unwrap().len(), 9);
+        assert_eq!(remove_repeats_and_gaps((pref_map.clone(), Some(10))).unwrap().len(), 9);
+        assert_eq!(remove_repeats_and_gaps((pref_map.clone(), Some(5))).unwrap().len(), 4);
+    }
 }
