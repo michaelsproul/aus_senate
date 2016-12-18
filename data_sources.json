@@ -1,6 +1,9 @@
 {
     "candidate_ordering.csv": {
-        "url": "https://sproul.xyz/election2016/candidate_ordering.csv",
+        "zipped": true,
+        "url": "http://results.aec.gov.au/20499/Website/External/aec-senate-candidateinformation-20499.zip",
+        "inner-file": "aec-senate-candidateinformation-20499.csv",
+        "zip-sha256": "6d6783ee23447104f13aeed864fad1143dbd94d6778a23707855f8d706735a4e",
         "sha256": "7fab2c481db81a779d955ebd4d8f525bc28211013e21ac0977b16c558546bc3b"
     },
     "ACT.csv": {
