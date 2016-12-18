@@ -25,6 +25,14 @@ You can also run elections for a few states of your choice:
 $ ./run.py NSW SA
 ```
 
+# Other Implementations
+
+[Grahame Bowland](https://github.com/grahame) maintains a Python implementation
+of the same algorithm, and hosts a nice site with the results:
+
+* Code: https://github.com/grahame/dividebatur
+* Results: https://angrygoats.net/senate2016/#/index
+
 # License
 
 Copyright Michael Sproul 2016. Licensed under the terms of the [GNU General Public License version 3.0 or later][gpl].
