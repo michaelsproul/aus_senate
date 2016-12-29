@@ -1,3 +1,5 @@
+#![feature(conservative_impl_trait)]
+
 // Optionally use the system allocator on OS X to enable memory profiling.
 #![cfg_attr(feature = "osx_mem_profile", feature(alloc_system))]
 #[cfg(feature = "osx_mem_profile")]

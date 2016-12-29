@@ -3,6 +3,8 @@ use candidate::*;
 use util::*;
 use arith::*;
 
+use std::mem;
+
 /// Map from transfer values to ballots with that transfer value.
 pub type TransferMap<'a> = BTreeMap<Frac, Vec<&'a mut Ballot>>;
 
@@ -11,9 +13,26 @@ pub type BallotMap<'a> = HashMap<CandidateId, TransferMap<'a>>;
 
 /// Intermediate data structure mapping candidates to ballots.
 pub struct VoteMap<'a> {
-    pub tally: HashMap<CandidateId, Int>,
-    pub map: BallotMap<'a>,
-    pub one: Frac,
+    info: HashMap<CandidateId, VoteInfo<'a>>,
+    candidates: &'a CandidateMap,
+    one: Frac,
+}
+
+/// Per-candidate intermediate data.
+struct VoteInfo<'a> {
+    votes: Int,
+    ballots: TransferMap<'a>,
+    eliminated: bool,
+}
+
+impl<'a> VoteInfo<'a> {
+    fn new(one: Frac) -> Self {
+        VoteInfo {
+            votes: Int::from(0),
+            ballots: new_transfer_map(one),
+            eliminated: false,
+        }
+    }
 }
 
 fn new_transfer_map<'a>(one: Frac) -> TransferMap<'a> {
@@ -23,21 +42,19 @@ fn new_transfer_map<'a>(one: Frac) -> TransferMap<'a> {
 }
 
 impl <'a> VoteMap<'a> {
-    pub fn new(candidates: &CandidateMap) -> Result<VoteMap<'a>, String> {
+    pub fn new(candidates: &'a CandidateMap) -> Result<VoteMap<'a>, String> {
         let mut v = VoteMap {
-            tally: HashMap::new(),
-            map: HashMap::new(),
+            info: HashMap::new(),
+            candidates: candidates,
             one: frac!(1),
         };
         for &id in candidates.keys() {
-            let e1 = v.tally.insert(id, Int::from(0));
-            let e2 = v.map.insert(id, new_transfer_map(v.one.clone()));
-            if e1.is_some() || e2.is_some() {
+            let prev = v.info.insert(id, VoteInfo::new(v.one.clone()));
+            if prev.is_some() {
                 return Err(format!("Candidate ID {} appears more than once", id));
             }
         }
-        debug_assert!(v.map.len() == candidates.len());
-        debug_assert!(v.tally.len() == candidates.len());
+        debug_assert!(v.info.len() == candidates.len());
         Ok(v)
     }
 
@@ -45,21 +62,22 @@ impl <'a> VoteMap<'a> {
     pub fn add(&mut self, ballot: &'a mut Ballot) {
         let candidate = ballot.prefs[ballot.current];
 
-        // Add to the candidate's tally.
-        let tally = &mut self.tally;
-        let one = &self.one;
-        let mut vote_count = tally.get_mut(&candidate).expect("Candidate not found");
-        *vote_count = &*vote_count + Int::from(ballot.weight);
+        let all_info = &mut self.info;
+        let mut info = all_info.get_mut(&candidate).expect("Candidate not found");
 
-        // Add the ballot to the candidate's bucket.
-        let mut ballot_map = self.map.get_mut(&candidate).unwrap();
-        let mut bucket = ballot_map.get_mut(&one).unwrap();
+        // Add to the candidate's tally.
+        info.votes = &info.votes + Int::from(ballot.weight);
+
+        // Add the ballot to the appropriate bucket.
+        // TODO: kill this "one" business?
+        let bucket = info.ballots.get_mut(&self.one).unwrap();
         bucket.push(ballot);
     }
 
-    /// Get the IDs of all candidates who vote exceeds the quota.
+    /// Get the IDs of all candidates whose vote exceeds the quota.
     pub fn get_candidates_with_quota(&self, quota: &Int) -> Vec<CandidateId> {
-        let mut candidates_with_quota = self.tally.iter()
+        let mut candidates_with_quota = self.info.iter()
+            .map(|(id, info)| (id, &info.votes))
             .filter(|&(_, votes)| votes >= quota)
             .collect::<Vec<_>>();
 
@@ -76,17 +94,20 @@ impl <'a> VoteMap<'a> {
 
     /// Get the ID of the candidate with the least votes.
     pub fn get_last_candidate(&self) -> CandidateId {
-        self.tally.iter().min_by_key(|&(_, v)| v).map(|(&c, _)| c).unwrap()
+        self.candidates_remaining()
+            .min_by_key(|&(_, info)| &info.votes)
+            .map(|(id, _)| id)
+            .unwrap()
     }
 
     /// Get the integer tally for a candidate (assuming they're in the map).
     pub fn get_tally(&self, candidate: CandidateId) -> Int {
-        self.tally.get(&candidate).unwrap().clone()
+        self.info[&candidate].votes.clone()
     }
 
     pub fn find_next_valid_preference(&self, b: &Ballot) -> Option<usize> {
         for (i, cand) in b.prefs[b.current .. ].iter().enumerate() {
-            if self.tally.get(cand).is_some() {
+            if !self.info[cand].eliminated {
                 return Some(b.current + i);
             }
         }
@@ -94,30 +115,46 @@ impl <'a> VoteMap<'a> {
     }
 
     fn redistribute_votes(&mut self, candidate: CandidateId, transfer_value: Option<Frac>) {
-        let ballots: TransferMap<'a> = self.map.remove(&candidate).unwrap();
-        self.tally.remove(&candidate).unwrap();
+        info!("Distributing preferences for {:?}", self.candidates[&candidate]);
+
+        // Zero the elected candidate's vote, mark them eliminated and sieze their ballots.
+        let ballots = {
+            let info = self.info.get_mut(&candidate).unwrap();
+            info.votes = Int::from(0);
+            info.eliminated = true;
+
+            mem::replace(&mut info.ballots, new_transfer_map(frac!(1)))
+        };
 
         let grouped_ballots: BallotMap<'a> = group_by_candidate(&*self, ballots, &transfer_value);
         let tallies = compute_tallies(&grouped_ballots);
 
-        for (candidate, transfer_map) in grouped_ballots {
-            let mut candidate_map = self.map.get_mut(&candidate).unwrap();
+        // FIXME: clean this up.
+        for (cand, transfer_map) in grouped_ballots {
+            let candidate_map = &mut self.info.get_mut(&cand).unwrap().ballots;
 
             for (transfer_val, ballots) in transfer_map {
                 let mut bucket = candidate_map.entry(transfer_val).or_insert_with(Vec::new);
+                trace!("Transferring {} ballots from {:?} to {:?}",
+                    ballots.len(), self.candidates[&candidate], self.candidates[&cand]
+                );
                 bucket.extend(ballots);
             }
         }
 
-        for (candidate, vote_update) in tallies {
-            let mut vote_count = self.tally.get_mut(&candidate).unwrap();
+        for (cand, vote_update) in tallies {
+            let vote_count = &mut self.info.get_mut(&cand).unwrap().votes;
+
+            trace!("Votes for candidate {:?}: {:?} + {:?} = {:?}",
+                self.candidates[&cand], vote_count, vote_update, &*vote_count + vote_update.clone()
+            );
             *vote_count = &*vote_count + vote_update;
         }
     }
 
     pub fn elect_candidate(&mut self, candidate: CandidateId, quota: &Int) {
         let transfer_value = {
-            let num_votes = &self.tally[&candidate];
+            let num_votes = &self.info[&candidate].votes;
             Frac::ratio(&(num_votes - quota), &num_votes)
         };
         //transfer_value.normalize();
@@ -127,5 +164,29 @@ impl <'a> VoteMap<'a> {
 
     pub fn knock_out_candidate(&mut self, candidate: CandidateId) {
         self.redistribute_votes(candidate, None)
+    }
+
+    pub fn num_candidates_remaining(&self) -> usize {
+        self.candidates_remaining().count()
+    }
+
+    fn candidates_remaining<'b>(&'b self) -> impl Iterator<Item=(CandidateId, &'b VoteInfo<'a>)> {
+        self.info
+            .iter()
+            .filter(|&(_, info)| !info.eliminated)
+            .map(|(id, info)| (*id, info))
+    }
+
+    pub fn drain(self) -> Vec<(CandidateId, Int)> {
+        self.info
+            .into_iter()
+            .filter(|&(_, ref info)| !info.eliminated)
+            .map(|(id, info)| (id, info.votes))
+            .collect()
+    }
+
+    pub fn mark_eliminated(&mut self, candidate: CandidateId) {
+        let info = self.info.get_mut(&candidate).unwrap();
+        info.eliminated = true;
     }
 }

@@ -66,18 +66,21 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
 
     // Distribute their preferences.
     for &id in &elected_on_first_prefs {
-        // TODO: optimize by removing candidates in bulk (don't transfer to each other).
+        vote_map.mark_eliminated(id);
+    }
+    for &id in &elected_on_first_prefs {
         vote_map.elect_candidate(id, &quota);
     }
 
     // Stage 2: Winnow out the shithouse candidates until we've elected enough
     // candidates based on preferences, OR reached only two candidates.
     while result.num_elected() < num_candidates as usize {
+        let candidates_remaining = vote_map.num_candidates_remaining();
         let positions_remaining = num_candidates as usize - result.num_elected();
         // If there is some number of candidates still to be elected, and all other
         // candidates have been eliminated, then elect all the remaining candidates.
-        if vote_map.tally.len() == positions_remaining {
-            for (id, votes) in vote_map.tally.drain() {
+        if candidates_remaining == positions_remaining {
+            for (id, votes) in vote_map.drain() {
                 result.add_senator(id, votes, candidates);
             }
             break;
@@ -85,9 +88,9 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
 
         // Otherwise, if there are 2 candidates remaining and only 1 left to be elected,
         // try to elect the candidate with the majority.
-        if vote_map.tally.len() == 2 {
+        if candidates_remaining == 2 {
             assert_eq!(positions_remaining, 1);
-            let mut last_two: Vec<_> = vote_map.tally.drain().collect();
+            let mut last_two = vote_map.drain();
             let (c1, v1) = last_two.pop().unwrap();
             let (c2, v2) = last_two.pop().unwrap();
             let (winner, winner_votes) = match Ord::cmp(&v1, &v2) {
@@ -105,11 +108,11 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
         }
 
         let last_candidate = vote_map.get_last_candidate();
-        info!("Eliminating candidate: {}, candidates remaining: {}", last_candidate, vote_map.tally.len());
+        info!("Eliminating candidate: {}, candidates remaining: {}", last_candidate, candidates_remaining);
         vote_map.knock_out_candidate(last_candidate);
 
         // If there is now a candidate with a full quota, elect them!
-        if let Some(candidate) = vote_map.get_candidate_with_quota(&quota) {
+        while let Some(candidate) = vote_map.get_candidate_with_quota(&quota) {
             let votes = vote_map.get_tally(candidate);
             info!("Electing candidate: {} with {} votes", candidate, votes);
             result.add_senator(candidate, votes, candidates);
