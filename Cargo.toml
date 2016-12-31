@@ -1,6 +1,6 @@
 [package]
 name = "aus_senate"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Michael Sproul <micsproul@gmail.com>"]
 license = "GPL-3.0+"
 
@@ -10,8 +10,8 @@ rustc-serialize = "0.3.19"
 log = "0.3"
 env_logger = "0.3"
 lazy_static = "0.1.*"
-#ramp = "0.3.3"
-rust-gmp = { git = "https://github.com/michaelsproul/rust-gmp.git", branch = "floor-ceil" }
+rust-gmp = "0.4"
+text_io = "0.1"
 
 [profile.release]
 debug = true

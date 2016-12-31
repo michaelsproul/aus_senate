@@ -1,5 +1,5 @@
-use std::cmp::Ordering::*;
 use std::error::Error;
+use std::collections::VecDeque;
 
 use util::*;
 use candidate::*;
@@ -7,20 +7,37 @@ use vote_map::*;
 use ballot_parse::*;
 use senate_result::*;
 
-pub fn compute_quota(num_votes: u32, num_senators: u32) -> Int {
-    frac!(num_votes, num_senators + 1).ceil()
+pub fn compute_quota(num_votes: u32, num_positions: usize) -> Int {
+    frac!(num_votes, num_positions + 1).ceil()
 }
 
-pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, num_candidates: u32)
+fn elect_candidates<'a, 'b: 'a>(elected: Vec<CandidateElected<'a>>,
+                        result: &mut Senate<'b>,
+                        preference_transfers: &mut VecDeque<PreferenceTransfer<'a>>,
+                        candidates: &'b CandidateMap) -> () {
+    for CandidateElected { id, votes, transfers } in elected {
+        trace!("Elected {:?} with {:?} votes", candidates[&id], votes);
+        result.add_senator(id, votes, candidates);
+        preference_transfers.extend(transfers);
+    }
+}
+
+fn exclude_candidates<'a, 'b: 'a>(excluded: Vec<CandidateExcluded<'a>>,
+                        preference_transfers: &mut VecDeque<PreferenceTransfer<'a>>,
+                        candidates: &'b CandidateMap) -> () {
+    for CandidateExcluded { id, transfers } in excluded {
+        info!("Excluded {:?}", candidates[&id]);
+        preference_transfers.extend(transfers);
+    }
+}
+
+pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, num_positions: usize)
     -> Result<Senate<'a>, Box<Error>>
     where I: IntoIterator<Item=IOBallot>
 {
-    // TODO: Sanity check for all preferences (to make various unwraps safe).
-
-    // List of elected candidates, as well as algorithm statistics.
     let mut result = Senate::new();
 
-    // Vector of owned ballots.
+    // Ingest ballots.
     let mut ballots = vec![];
 
     for maybe_ballot in ballot_stream {
@@ -47,80 +64,49 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
         vote_map.add(ballot_ref);
     }
 
-    let quota = compute_quota(result.stats.num_valid_votes(), num_candidates);
+    let quota = compute_quota(result.stats.num_valid_votes(), num_positions);
 
-    info!("Quota: {}", quota);
+    let mut preference_transfers = VecDeque::new();
 
-    // Stage 1: Elect all candidates with a full quota.
-    let elected_on_first_prefs = vote_map.get_candidates_with_quota(&quota);
+    info!("Count #1");
+    let elected_on_first_prefs = vote_map.elect_candidates_with_quota(&quota);
+    elect_candidates(elected_on_first_prefs, &mut result, &mut preference_transfers, candidates);
 
-    // Elect them all.
-    for &id in &elected_on_first_prefs {
-        let votes = vote_map.get_tally(id);
-        info!("Elected candidate {:?} in the first round of voting with {} votes",
-            candidates[&id],
-            votes
+    for i in 2.. {
+        info!("Count #{}", i);
+
+        // Transfer pending preferences.
+        let transfer = preference_transfers.pop_front()
+            .expect("election should terminate before running out of preferences to transfer");
+
+        trace!("Transferring preferences for {:?} at value {:?}",
+            candidates[&transfer.0], transfer.1
         );
-        result.add_senator(id, votes, candidates);
-    }
+        vote_map.transfer_preferences(transfer);
 
-    // Distribute their preferences.
-    for &id in &elected_on_first_prefs {
-        vote_map.mark_eliminated(id);
-    }
-    for &id in &elected_on_first_prefs {
-        vote_map.elect_candidate(id, &quota);
-    }
+        // Elect any candidates with a full quota, and stage their preference transfers.
+        let elected = vote_map.elect_candidates_with_quota(&quota);
+        elect_candidates(elected, &mut result, &mut preference_transfers, candidates);
 
-    // Stage 2: Winnow out the shithouse candidates until we've elected enough
-    // candidates based on preferences, OR reached only two candidates.
-    while result.num_elected() < num_candidates as usize {
-        let candidates_remaining = vote_map.num_candidates_remaining();
-        let positions_remaining = num_candidates as usize - result.num_elected();
-        // If there is some number of candidates still to be elected, and all other
-        // candidates have been eliminated, then elect all the remaining candidates.
-        if candidates_remaining == positions_remaining {
-            for (id, votes) in vote_map.drain() {
-                result.add_senator(id, votes, candidates);
+        if preference_transfers.is_empty() {
+            // If the number of candidates remaining is equal to the number of positions, elect
+            // them all.
+            let positions_remaining = num_positions - result.num_elected();
+            if vote_map.num_candidates_remaining() == positions_remaining {
+                let remaining = vote_map.elect_remaining();
+                elect_candidates(remaining, &mut result, &mut preference_transfers, candidates);
+                break;
             }
-            break;
+
+            // Exclude some candidates if we've run out of things to do.
+            let excluded = vote_map.exclude_candidates();
+            exclude_candidates(excluded, &mut preference_transfers, candidates);
         }
 
-        // Otherwise, if there are 2 candidates remaining and only 1 left to be elected,
-        // try to elect the candidate with the majority.
-        if candidates_remaining == 2 {
-            assert_eq!(positions_remaining, 1);
-            let mut last_two = vote_map.drain();
-            let (c1, v1) = last_two.pop().unwrap();
-            let (c2, v2) = last_two.pop().unwrap();
-            let (winner, winner_votes) = match Ord::cmp(&v1, &v2) {
-                Equal => {
-                    result.tied = true;
-                    result.add_senator(c1, v1, candidates);
-                    result.add_senator(c2, v2, candidates);
-                    return Ok(result);
-                }
-                Greater => (c1, v1),
-                Less => (c2, v2),
-            };
-            result.add_senator(winner, winner_votes, candidates);
-            break;
-        }
-
-        let last_candidate = vote_map.get_last_candidate();
-        info!("Eliminating candidate: {}, candidates remaining: {}", last_candidate, candidates_remaining);
-        vote_map.knock_out_candidate(last_candidate);
-
-        // If there is now a candidate with a full quota, elect them!
-        while let Some(candidate) = vote_map.get_candidate_with_quota(&quota) {
-            let votes = vote_map.get_tally(candidate);
-            info!("Electing candidate: {} with {} votes", candidate, votes);
-            result.add_senator(candidate, votes, candidates);
-            vote_map.elect_candidate(candidate, &quota);
-        }
+        vote_map.print_summary();
     }
 
-    assert_eq!(result.num_elected(), num_candidates as usize);
+    assert_eq!(result.num_elected(), num_positions);
 
     Ok(result)
 }

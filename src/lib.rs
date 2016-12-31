@@ -14,6 +14,8 @@ extern crate csv;
 extern crate rustc_serialize;
 //extern crate ramp;
 extern crate gmp;
+#[macro_use]
+extern crate text_io;
 
 #[macro_use]
 pub mod util;
