@@ -25,6 +25,27 @@ struct VoteInfo<'a> {
     eliminated: bool,
 }
 
+pub struct PreferenceTransfer<'a>(pub CandidateId, pub Frac, pub Vec<&'a mut Ballot>);
+
+pub struct CandidateElected<'a> {
+    pub id: CandidateId,
+    pub votes: Int,
+    pub transfers: Vec<PreferenceTransfer<'a>>,
+}
+
+pub struct CandidateExcluded<'a> {
+    pub id: CandidateId,
+    pub transfers: Vec<PreferenceTransfer<'a>>,
+}
+
+pub enum Event<'a> {
+    Elected(Vec<CandidateElected<'a>>),
+    Excluded(Vec<CandidateExcluded<'a>>),
+}
+
+// either: a few people are elected, and we have to transfer their preferences OR
+//         a few people are excluded, and we have to transfer their preferences
+
 impl<'a> VoteInfo<'a> {
     fn new(one: Frac) -> Self {
         VoteInfo {
@@ -77,6 +98,7 @@ impl <'a> VoteMap<'a> {
     /// Get the IDs of all candidates whose vote exceeds the quota.
     pub fn get_candidates_with_quota(&self, quota: &Int) -> Vec<CandidateId> {
         let mut candidates_with_quota = self.info.iter()
+            .filter(|&(_, info)| !info.eliminated)
             .map(|(id, info)| (id, &info.votes))
             .filter(|&(_, votes)| votes >= quota)
             .collect::<Vec<_>>();
@@ -188,5 +210,80 @@ impl <'a> VoteMap<'a> {
     pub fn mark_eliminated(&mut self, candidate: CandidateId) {
         let info = self.info.get_mut(&candidate).unwrap();
         info.eliminated = true;
+    }
+
+    pub fn transfer_preferences(&mut self, transfer: PreferenceTransfer<'a>) {
+        let PreferenceTransfer(_, transfer_val, all_ballots) = transfer;
+
+        let grouped_ballots = group_ballots_by_candidate(&*self, all_ballots);
+
+        for (continuing_id, ballots) in grouped_ballots {
+            let mut info = self.info.get_mut(&continuing_id).unwrap();
+
+            assert!(!info.eliminated);
+
+            let incr = ballot_value(&transfer_val, &ballots);
+            info.votes = &info.votes + &incr;
+            trace!("+{:?} votes for {:?}, brings total to {:?}", incr, self.candidates[&continuing_id], info.votes);
+
+            let bucket = info.ballots.entry(transfer_val.clone()).or_insert_with(Vec::new);
+            bucket.extend(ballots);
+        }
+    }
+
+    pub fn elect_candidates_with_quota(&mut self, quota: &Int) -> Vec<CandidateElected<'a>> {
+        let candidates = self.get_candidates_with_quota(quota);
+        let mut elected = vec![];
+
+        for candidate in candidates {
+            let info = self.info.get_mut(&candidate).unwrap();
+
+            // Mark eliminated.
+            info.eliminated = true;
+
+            let num_votes = info.votes.clone();
+
+            // Create `PreferenceTransfer` events for each transfer value.
+            let transfer_map = mem::replace(&mut info.ballots, new_transfer_map(frac!(1)));
+
+            // Collect all ballots (erasing existing transfer values).
+            let all_ballots: Vec<_> = transfer_map
+                .into_iter()
+                .flat_map(|(_, ballots)| ballots)
+                .collect();
+
+            let num_ballots: u32 = all_ballots.iter().map(|b| b.weight).sum();
+            trace!("num_ballots: {}", num_ballots);
+
+            // HOLY SHIT THIS IS CRAZY.
+            let transfer_value = Frac::ratio(&(&num_votes - quota), &Int::from(num_ballots));
+
+            let pref_transfers = vec![PreferenceTransfer(candidate, transfer_value, all_ballots)];
+
+            /* THE OLD WAY (the logical way?)
+            let mut pref_transfers: Vec<_> = transfer_map
+                .into_iter()
+                .map(|(transfer_val, ballots)| {
+                    let new_tval = &multiplier * &transfer_val;
+                    trace!("Transferring prefs for {} at {:?} (= {:?} * {:?})",
+                        candidate, new_tval, multiplier, transfer_val
+                    );
+                    PreferenceTransfer(candidate, &multiplier * &transfer_val, ballots)
+                })
+                .collect();
+
+            // Reverse the preference transfer events so they're ordered from largest to
+            // smallest transfer value.
+            pref_transfers.reverse();
+            */
+
+            elected.push(CandidateElected {
+                id: candidate,
+                votes: num_votes,
+                transfers: pref_transfers
+            });
+        }
+
+        elected
     }
 }

@@ -1,5 +1,6 @@
 use std::cmp::Ordering::*;
 use std::error::Error;
+use std::collections::VecDeque;
 
 use util::*;
 use candidate::*;
@@ -12,6 +13,78 @@ pub fn compute_quota(num_votes: u32, num_senators: u32) -> Int {
 }
 
 pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, num_candidates: u32)
+    -> Result<Senate<'a>, Box<Error>>
+    where I: IntoIterator<Item=IOBallot>
+{
+    let mut result = Senate::new();
+
+    // Ingest ballots.
+    let mut ballots = vec![];
+
+    for maybe_ballot in ballot_stream {
+        match maybe_ballot {
+            Ok(ballot) => {
+                result.stats.record_valid_vote(&ballot);
+                ballots.push(ballot);
+            }
+            Err(InvalidBallot(err)) => {
+                // TODO: make ballot parsing errors a hard failure.
+                result.stats.record_invalid_vote(err);
+            }
+            Err(InputError(e)) => {
+                return Err(e);
+            }
+        };
+    }
+
+    // Map from candidate IDs to numbers of votes.
+    let mut vote_map = try!(VoteMap::new(candidates));
+
+    // Allocate first preference votes.
+    for ballot_ref in ballots.iter_mut() {
+        vote_map.add(ballot_ref);
+    }
+
+    let quota = compute_quota(result.stats.num_valid_votes(), num_candidates);
+
+    let mut preference_transfers = VecDeque::new();
+
+    trace!("Count #1");
+    let elected_on_first_prefs = vote_map.elect_candidates_with_quota(&quota);
+
+    for CandidateElected { id, votes, transfers } in elected_on_first_prefs {
+        trace!("Elected {:?} with {:?} votes", candidates[&id], votes);
+        result.add_senator(id, votes, candidates);
+        preference_transfers.extend(transfers);
+    }
+
+    for i in 2.. {
+        trace!("Count #{}", i);
+
+        if let Some(transfer) = preference_transfers.pop_front() {
+            trace!("Transferring preferences for {:?} at value {:?}",
+                candidates[&transfer.0], transfer.1
+            );
+            vote_map.transfer_preferences(transfer);
+
+            let elected = vote_map.elect_candidates_with_quota(&quota);
+            // TODO: put this in a method.
+            for CandidateElected { id, votes, transfers } in elected {
+                trace!("Elected {:?} with {:?} votes", candidates[&id], votes);
+                result.add_senator(id, votes, candidates);
+                preference_transfers.extend(transfers);
+            }
+
+            // TODO: exclude some candidates if nobody is elected.
+        } else {
+            break;
+        }
+    }
+
+    Ok(result)
+}
+
+pub fn decide_election_old<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, num_candidates: u32)
     -> Result<Senate<'a>, Box<Error>>
     where I: IntoIterator<Item=IOBallot>
 {
