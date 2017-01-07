@@ -47,22 +47,22 @@ pub enum Event<'a> {
 //         a few people are excluded, and we have to transfer their preferences
 
 impl<'a> VoteInfo<'a> {
-    fn new(one: Frac) -> Self {
+    fn new() -> Self {
         VoteInfo {
             votes: Int::from(0),
-            ballots: new_transfer_map(one),
+            ballots: new_transfer_map(),
             eliminated: false,
         }
     }
 
     fn take_ballots(&mut self) -> TransferMap<'a> {
-        mem::replace(&mut self.ballots, new_transfer_map(frac!(1)))
+        mem::replace(&mut self.ballots, new_transfer_map())
     }
 }
 
-fn new_transfer_map<'a>(one: Frac) -> TransferMap<'a> {
+fn new_transfer_map<'a>() -> TransferMap<'a> {
     let mut map = TransferMap::new();
-    map.insert(one, vec![]);
+    map.insert(frac!(1), vec![]);
     map
 }
 
@@ -74,7 +74,7 @@ impl <'a> VoteMap<'a> {
             one: frac!(1),
         };
         for &id in candidates.keys() {
-            let prev = v.info.insert(id, VoteInfo::new(v.one.clone()));
+            let prev = v.info.insert(id, VoteInfo::new());
             if prev.is_some() {
                 return Err(format!("Candidate ID {} appears more than once", id));
             }
@@ -94,7 +94,6 @@ impl <'a> VoteMap<'a> {
         info.votes = &info.votes + Int::from(ballot.weight);
 
         // Add the ballot to the appropriate bucket.
-        // TODO: kill this "one" business?
         let bucket = info.ballots.get_mut(&self.one).unwrap();
         bucket.push(ballot);
     }
