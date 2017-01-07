@@ -54,6 +54,10 @@ impl<'a> VoteInfo<'a> {
             eliminated: false,
         }
     }
+
+    fn take_ballots(&mut self) -> TransferMap<'a> {
+        mem::replace(&mut self.ballots, new_transfer_map(frac!(1)))
+    }
 }
 
 fn new_transfer_map<'a>(one: Frac) -> TransferMap<'a> {
@@ -173,8 +177,7 @@ impl <'a> VoteMap<'a> {
             let info = self.info.get_mut(&candidate).unwrap();
             info.votes = Int::from(0);
             info.eliminated = true;
-
-            mem::replace(&mut info.ballots, new_transfer_map(frac!(1)))
+            info.take_ballots()
         };
 
         let grouped_ballots: BallotMap<'a> = group_by_candidate(&*self, ballots, &transfer_value);
@@ -279,7 +282,7 @@ impl <'a> VoteMap<'a> {
             let num_votes = info.votes.clone();
 
             // Create `PreferenceTransfer` events for each transfer value.
-            let transfer_map = mem::replace(&mut info.ballots, new_transfer_map(frac!(1)));
+            let transfer_map = info.take_ballots();
 
             // Collect all ballots (erasing existing transfer values).
             let all_ballots: Vec<_> = transfer_map
@@ -312,8 +315,7 @@ impl <'a> VoteMap<'a> {
 
         info.eliminated = true;
 
-        // FIXME: make this a method.
-        let transfer_map = mem::replace(&mut info.ballots, new_transfer_map(frac!(1)));
+        let transfer_map = info.take_ballots();
 
         let mut pref_transfers: Vec<_> = transfer_map
             .into_iter()
