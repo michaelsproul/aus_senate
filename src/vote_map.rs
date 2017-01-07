@@ -116,10 +116,39 @@ impl <'a> VoteMap<'a> {
 
     /// Get the ID of the candidate with the least votes.
     pub fn get_last_candidate(&self) -> CandidateId {
-        self.candidates_remaining()
-            .min_by_key(|&(_, info)| &info.votes)
-            .map(|(id, _)| id)
-            .unwrap()
+        let mut sorted_candidates: Vec<_> = self.candidates_remaining().collect();
+        sorted_candidates.sort_by_key(|&(_, info)| &info.votes);
+
+        let min_vote = sorted_candidates[0].1.votes.clone();
+
+        // Collect all candidates with the minimum vote.
+        let min_candidates: Vec<_> = sorted_candidates
+            .into_iter()
+            .take_while(|&(_, info)| info.votes == min_vote)
+            .map(|(candidate, _)| candidate)
+            .collect();
+
+        if min_candidates.len() == 1 {
+            return min_candidates[0];
+        }
+
+        // Ask the user...
+        println!("Uhoh, there's been a tie for last...");
+        println!("Which of these hapless candidates would you like to use your ill-gotten \
+                  faux-democratic power to exclude?");
+        for (idx, candidate) in min_candidates.iter().enumerate() {
+            println!("{}: {:?}", idx, self.candidates[candidate]);
+        }
+
+        let mut index: usize;
+        loop {
+            index = read!();
+            if index < min_candidates.len() {
+                let candidate = min_candidates[index];
+                println!("Ok, excluding {:?}", self.candidates[&candidate]);
+                return candidate;
+            }
+        }
     }
 
     /// Get the integer tally for a candidate (assuming they're in the map).
@@ -199,11 +228,15 @@ impl <'a> VoteMap<'a> {
             .map(|(id, info)| (*id, info))
     }
 
-    pub fn drain(self) -> Vec<(CandidateId, Int)> {
+    pub fn elect_remaining(self) -> Vec<CandidateElected<'a>> {
         self.info
             .into_iter()
             .filter(|&(_, ref info)| !info.eliminated)
-            .map(|(id, info)| (id, info.votes))
+            .map(|(id, info)| CandidateElected {
+                id: id,
+                votes: info.votes,
+                transfers: vec![],
+            })
             .collect()
     }
 
@@ -224,7 +257,9 @@ impl <'a> VoteMap<'a> {
 
             let incr = ballot_value(&transfer_val, &ballots);
             info.votes = &info.votes + &incr;
-            trace!("+{:?} votes for {:?}, brings total to {:?}", incr, self.candidates[&continuing_id], info.votes);
+            if !incr.is_zero() {
+                trace!("+{:?} votes for {:?}, brings total to {:?}", incr, self.candidates[&continuing_id], info.votes);
+            }
 
             let bucket = info.ballots.entry(transfer_val.clone()).or_insert_with(Vec::new);
             bucket.extend(ballots);
@@ -253,29 +288,12 @@ impl <'a> VoteMap<'a> {
                 .collect();
 
             let num_ballots: u32 = all_ballots.iter().map(|b| b.weight).sum();
-            trace!("num_ballots: {}", num_ballots);
+            //trace!("num_ballots: {}", num_ballots);
 
             // HOLY SHIT THIS IS CRAZY.
             let transfer_value = Frac::ratio(&(&num_votes - quota), &Int::from(num_ballots));
 
             let pref_transfers = vec![PreferenceTransfer(candidate, transfer_value, all_ballots)];
-
-            /* THE OLD WAY (the logical way?)
-            let mut pref_transfers: Vec<_> = transfer_map
-                .into_iter()
-                .map(|(transfer_val, ballots)| {
-                    let new_tval = &multiplier * &transfer_val;
-                    trace!("Transferring prefs for {} at {:?} (= {:?} * {:?})",
-                        candidate, new_tval, multiplier, transfer_val
-                    );
-                    PreferenceTransfer(candidate, &multiplier * &transfer_val, ballots)
-                })
-                .collect();
-
-            // Reverse the preference transfer events so they're ordered from largest to
-            // smallest transfer value.
-            pref_transfers.reverse();
-            */
 
             elected.push(CandidateElected {
                 id: candidate,
@@ -285,5 +303,38 @@ impl <'a> VoteMap<'a> {
         }
 
         elected
+    }
+
+    // TODO: bulk exclusions.
+    pub fn exclude_candidates(&mut self) -> Vec<CandidateExcluded<'a>> {
+        let candidate = self.get_last_candidate();
+
+        let info = self.info.get_mut(&candidate).unwrap();
+
+        info.eliminated = true;
+
+        // FIXME: make this a method.
+        let transfer_map = mem::replace(&mut info.ballots, new_transfer_map(frac!(1)));
+
+        let mut pref_transfers: Vec<_> = transfer_map
+            .into_iter()
+            .map(|(transfer_val, ballots)| PreferenceTransfer(candidate, transfer_val, ballots))
+            .collect();
+
+        // Reverse the preference transfer events so they're ordered from largest to
+        // smallest transfer value.
+        pref_transfers.reverse();
+
+        vec![CandidateExcluded {
+            id: candidate,
+            transfers: pref_transfers,
+        }]
+    }
+
+    pub fn print_summary(&self) {
+        trace!("Vote tallies");
+        for (candidate, info) in self.info.iter().filter(|&(_, i)| !i.eliminated) {
+            trace!("{:?}: {:?} votes", self.candidates[candidate], info.votes);
+        }
     }
 }

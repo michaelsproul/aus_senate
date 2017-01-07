@@ -26,7 +26,7 @@ pub fn group_ballots_by_candidate<'a>(vote_map: &VoteMap<'a>, ballots: Vec<&'a m
 /// Compute the value of a list of ballots at a given weight (transfer value).
 pub fn ballot_value<'a>(weight: &Frac, ballots: &[&'a mut Ballot]) -> Int {
     let num_ballots: u32 = ballots.iter().map(|b| b.weight).sum();
-    trace!("num ballots: {}", num_ballots);
+    //trace!("num ballots: {}", num_ballots);
     let value = weight * frac!(num_ballots);
     value.floor()
 }

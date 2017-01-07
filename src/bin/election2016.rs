@@ -89,7 +89,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
     let prefs_file_name = &args[2];
     let state = &args[3];
     let num_candidates = match args.get(4) {
-        Some(x) => try!(x.parse::<u32>()),
+        Some(x) => try!(x.parse::<usize>()),
         None => 12
     };
 
