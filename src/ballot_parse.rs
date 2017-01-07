@@ -58,7 +58,7 @@ pub struct Constraints {
 
 impl Constraints {
     // Preferring below the line votes is codified in Section 269(2) of the Electoral Act.
-    pub fn lax2016() -> Constraints {
+    pub fn official() -> Constraints {
         Constraints {
             choice: PreferBelow,
             counts: vec![MinAbove(1), MinBelow(6)]

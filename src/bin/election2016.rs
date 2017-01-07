@@ -105,8 +105,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
     let candidate_ids = get_candidate_id_list(&all_candidates, state);
     let groups = get_group_list(&all_candidates, state);
 
-    // TODO: command-line configurable constraints
-    let constraints = Constraints::lax2016();
+    let constraints = Constraints::official();
 
     debug!("Num groups: {}", groups.len());
     trace!("Groups: {:#?}", groups);
