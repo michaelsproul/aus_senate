@@ -64,7 +64,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
 
     let result = try!(decide_election(&candidates, ballots, 6));
 
-    for &(s, _) in result.senators.iter() {
+    for &(s, _) in &result.senators {
         println!("Elected: {} {} ({})", s.other_names, s.surname, s.party);
     }
 

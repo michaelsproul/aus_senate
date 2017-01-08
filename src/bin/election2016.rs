@@ -68,7 +68,7 @@ fn parse_candidates_file<R: Read>(input: R) -> Result<Vec<Candidate>, Box<Error>
     Ok(result)
 }
 
-fn get_candidate_id_list(candidates: &[Candidate], state: &String) -> Vec<CandidateId> {
+fn get_candidate_id_list(candidates: &[Candidate], state: &str) -> Vec<CandidateId> {
     candidates.iter()
         .filter(|c| &c.state == state)
         .map(|c| c.id)
@@ -96,7 +96,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
     let candidates_file = try!(File::open(candidates_file_name));
     let all_candidates = try!(parse_candidates_file(candidates_file));
 
-    for c in all_candidates.iter() {
+    for c in &all_candidates {
         debug!("{}: {} {} ({})", c.id, c.other_names, c.surname, c.party);
     }
 
@@ -118,7 +118,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
     let election_result = try!(decide_election(&candidates, ballots_iter, num_candidates));
 
     println!("=== Elected ===");
-    for &(c, ref votes) in election_result.senators.iter() {
+    for &(c, ref votes) in &election_result.senators {
         println!("{} {} ({}) [{} votes]", c.other_names, c.surname, c.party, votes);
     }
 
