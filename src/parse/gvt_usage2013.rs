@@ -22,7 +22,7 @@ pub fn parse<R: Read>(input: R) -> Result<GVTUsage, Box<Error>> {
     let mut reader = ::csv::Reader::from_reader(input);
 
     for raw_row in reader.decode::<GVTUsageRow>() {
-        let row = try!(raw_row);
+        let row = raw_row?;
         let ticket_map = gvt_usage.entry(row.state).or_insert_with(HashMap::new);
         // Skip ungrouped candidates with 0 vote.
         if &row.ticket == "UG" {

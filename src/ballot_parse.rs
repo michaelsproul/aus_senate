@@ -93,8 +93,8 @@ impl Constraints {
     fn check_above<'a>(&self, vote: GroupPrefMap<'a>) -> Result<GroupPrefMap<'a>, BallotParseErr> {
         for &count_constraint in &self.counts {
             match count_constraint {
-                MinAbove(min) => try!(Constraints::check_min(vote.len(), min, InvalidMinAbove)),
-                MaxAbove(max) => try!(Constraints::check_max(vote.len(), max, InvalidMaxAbove)),
+                MinAbove(min) => Constraints::check_min(vote.len(), min, InvalidMinAbove)?,
+                MaxAbove(max) => Constraints::check_max(vote.len(), max, InvalidMaxAbove)?,
                 _ => (),
             }
         }
@@ -104,8 +104,8 @@ impl Constraints {
     fn check_below(&self, vote: PrefMap) -> Result<PrefMap, BallotParseErr> {
         for &count_constraint in &self.counts {
             match count_constraint {
-                MinBelow(min) => try!(Constraints::check_min(vote.len(), min, InvalidMinBelow)),
-                MaxBelow(max) => try!(Constraints::check_max(vote.len(), max, InvalidMaxBelow)),
+                MinBelow(min) => Constraints::check_min(vote.len(), min, InvalidMinBelow)?,
+                MaxBelow(max) => Constraints::check_max(vote.len(), max, InvalidMaxBelow)?,
                 _ => (),
             }
         }
@@ -217,7 +217,7 @@ fn create_map<F, T>(prefs: Vec<&str>, func: F) -> Result<BallotRes<T>, BallotPar
         let pref = match raw_pref {
             "" => continue,
             "*" | "/" => 1,
-            _ => try!(raw_pref.parse::<u32>().map_err(|_| InvalidBallot(InvalidCharacter)))
+            _ =>  raw_pref.parse::<u32>().map_err(|_| InvalidBallot(InvalidCharacter))?
         };
 
         let value = func(index);

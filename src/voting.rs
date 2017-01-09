@@ -57,7 +57,7 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
     }
 
     // Map from candidate IDs to numbers of votes.
-    let mut vote_map = try!(VoteMap::new(candidates));
+    let mut vote_map = VoteMap::new(candidates)?;
 
     // Allocate first preference votes.
     for ballot_ref in ballots.iter_mut() {

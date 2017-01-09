@@ -17,7 +17,7 @@ pub fn parse<R: Read>(input: R) -> Result<BelowTheLine, Box<Error>> {
     let mut reader = ::csv::Reader::from_reader(input);
 
     for raw_row in reader.decode::<BTLRow>() {
-        let row = try!(raw_row);
+        let row = raw_row?;
         let vote_id = (row.batch, row.paper);
         match row.preference {
             Some(pref) => {

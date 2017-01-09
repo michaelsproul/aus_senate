@@ -51,7 +51,7 @@ fn parse_candidates_file<R: Read>(input: R) -> Result<Vec<Candidate>, Box<Error>
     let mut reader = csv::Reader::from_reader(input);
 
     for (id, raw_row) in reader.decode::<CandidateRow>().enumerate() {
-        let row = try!(raw_row);
+        let row = raw_row?;
         if row.nom_ty != "S" {
             continue;
         }
@@ -76,25 +76,25 @@ fn get_candidate_id_list(candidates: &[Candidate], state: &str) -> Vec<Candidate
 }
 
 fn main_with_result() -> Result<(), Box<Error>> {
-    try!(env_logger::init());
+    env_logger::init()?;
 
     let args: Vec<String> = env::args().collect();
 
     if args.len() != 4 && args.len() != 5 {
         println!("Usage: ./election2016 <candidates file> <prefs file> <state> [num candidates]");
-        try!(Err("invalid command line arguments.".to_string()));
+        Err("invalid command line arguments.".to_string())?;
     }
 
     let candidates_file_name = &args[1];
     let prefs_file_name = &args[2];
     let state = &args[3];
     let num_candidates = match args.get(4) {
-        Some(x) => try!(x.parse::<usize>()),
+        Some(x) => x.parse::<usize>()?,
         None => 12
     };
 
-    let candidates_file = try!(File::open(candidates_file_name));
-    let all_candidates = try!(parse_candidates_file(candidates_file));
+    let candidates_file = File::open(candidates_file_name)?;
+    let all_candidates = parse_candidates_file(candidates_file)?;
 
     for c in &all_candidates {
         debug!("{}: {} {} ({})", c.id, c.other_names, c.surname, c.party);
@@ -110,12 +110,12 @@ fn main_with_result() -> Result<(), Box<Error>> {
     debug!("Num groups: {}", groups.len());
     trace!("Groups: {:#?}", groups);
 
-    let prefs_file = try!(open_aec_csv(prefs_file_name));
+    let prefs_file = open_aec_csv(prefs_file_name)?;
 
     let mut csv_reader = csv::Reader::from_reader(prefs_file);
     let ballots_iter = parse_preferences_file!(csv_reader, &groups, &candidate_ids, &constraints);
 
-    let election_result = try!(decide_election(&candidates, ballots_iter, num_candidates));
+    let election_result = decide_election(&candidates, ballots_iter, num_candidates)?;
 
     println!("=== Elected ===");
     for &(c, ref votes) in &election_result.senators {

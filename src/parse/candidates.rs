@@ -19,7 +19,7 @@ pub fn parse<R: Read>(input: R) -> Result<Vec<Candidate>, Box<Error>> {
     let mut reader = ::csv::Reader::from_reader(input);
 
     for raw_row in reader.decode::<CandidateRow>() {
-        let row = try!(raw_row);
+        let row = raw_row?;
         result.push(Candidate {
             id: row.candidate_id,
             surname: row.surname,

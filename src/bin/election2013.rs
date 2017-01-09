@@ -32,7 +32,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
 
     if args.len() != 6 {
         println!("Usage: ./election2013 <candidates file> <gvt file> <gvt usage file> <btl votes> <state>");
-        try!(Err("invalid command line arguments.".to_string()));
+        Err("invalid command line arguments.".to_string())?
     }
 
     let candidates_file_name = &args[1];
@@ -41,16 +41,16 @@ fn main_with_result() -> Result<(), Box<Error>> {
     let btl_file_name = &args[4];
     let state = &args[5];
 
-    let gvt_file = try!(open_aec_csv(gvt_file_name));
-    let gvt = try!(gvt2013::parse(gvt_file));
-    let gvt_usage_file = try!(open_aec_csv(gvt_usage_file_name));
-    let gvt_usage = try!(gvt_usage2013::parse(gvt_usage_file));
+    let gvt_file = open_aec_csv(gvt_file_name)?;
+    let gvt = gvt2013::parse(gvt_file)?;
+    let gvt_usage_file = open_aec_csv(gvt_usage_file_name)?;
+    let gvt_usage = gvt_usage2013::parse(gvt_usage_file)?;
 
-    let btl_file = try!(open_aec_csv(btl_file_name));
-    let btl_votes = try!(btl2013::parse(btl_file));
+    let btl_file = open_aec_csv(btl_file_name)?;
+    let btl_votes = btl2013::parse(btl_file)?;
 
-    let candidates_file = try!(open_aec_csv(candidates_file_name));
-    let all_candidates = try!(candidates::parse(candidates_file));
+    let candidates_file = open_aec_csv(candidates_file_name)?;
+    let all_candidates = candidates::parse(candidates_file)?;
 
     let candidates = get_state_candidates(&all_candidates, state);
 
@@ -62,7 +62,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
         Ok(Ballot::single(flatten_pref_map(pref_map)))
     }));
 
-    let result = try!(decide_election(&candidates, ballots, 6));
+    let result = decide_election(&candidates, ballots, 6)?;
 
     for &(s, _) in &result.senators {
         println!("Elected: {} {} ({})", s.other_names, s.surname, s.party);
