@@ -61,7 +61,7 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
 
     // Allocate first preference votes.
     for ballot_ref in ballots.iter_mut() {
-        vote_map.add(ballot_ref);
+        vote_map.add(0, ballot_ref);
     }
 
     let quota = compute_quota(result.stats.num_valid_votes(), num_positions);
@@ -82,7 +82,7 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
         trace!("Transferring preferences for {:?} at value {:?}",
             candidates[&transfer.0], transfer.1
         );
-        vote_map.transfer_preferences(transfer);
+        vote_map.transfer_preferences(i - 1, transfer);
 
         // Elect any candidates with a full quota, and stage their preference transfers.
         let elected = vote_map.elect_candidates_with_quota(&quota);

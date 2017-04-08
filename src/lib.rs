@@ -6,13 +6,10 @@
 extern crate alloc_system;
 
 #[macro_use]
-extern crate lazy_static;
-#[macro_use]
 extern crate log;
 extern crate env_logger;
 extern crate csv;
 extern crate rustc_serialize;
-//extern crate ramp;
 extern crate gmp;
 #[macro_use]
 extern crate text_io;
@@ -29,3 +26,4 @@ pub mod parse;
 pub mod senate_result;
 pub mod stats;
 mod arith;
+mod vote_log;

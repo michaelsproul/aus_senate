@@ -1,4 +1,4 @@
-#[macro_use] extern crate aus_senate;
+extern crate aus_senate;
 extern crate csv;
 extern crate rustc_serialize;
 

@@ -9,7 +9,6 @@ csv = "0.14.4"
 rustc-serialize = "0.3.19"
 log = "0.3"
 env_logger = "0.3"
-lazy_static = "0.1.*"
 rust-gmp = "0.4"
 text_io = "0.1"
 
