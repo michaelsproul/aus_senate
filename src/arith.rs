@@ -10,7 +10,7 @@ pub fn group_ballots_by_candidate<'a>(vote_map: &VoteMap<'a>, ballots: Vec<&'a m
     let mut map = HashMap::new();
 
     for ballot in ballots {
-        if let Some(i) = vote_map.find_next_valid_preference(&ballot) {
+        if let Some(i) = vote_map.find_next_valid_preference(ballot) {
             ballot.current = i;
 
             let continuing_candidate = ballot.prefs[ballot.current];

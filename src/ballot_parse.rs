@@ -129,7 +129,7 @@ fn remove_repeats_and_gaps<T>((mut map, cutoff): BallotRes<T>)
         map.split_off(&cut);
     }
 
-    if map.len() > 0 {
+    if !map.is_empty() {
         Ok(map)
     } else {
         Err(InvalidBallot(EmptyBallot))
@@ -176,15 +176,15 @@ pub type GroupPrefMap<'a> = BTreeMap<u32, &'a [CandidateId]>;
 type BallotRes<T> = (BTreeMap<u32, T>, Option<u32>);
 
 pub fn flatten_pref_map(pref_map: PrefMap) -> Vec<CandidateId> {
-    pref_map.values().map(|&x| x).collect()
+    pref_map.into_iter().map(|(_, x)| x).collect()
 }
 
 pub fn flatten_group_pref_map(group_pref_map: GroupPrefMap) -> Vec<CandidateId> {
     let size = group_pref_map.values().map(|x| x.len()).sum();
     let mut flat = Vec::with_capacity(size);
 
-    for i in group_pref_map.keys() {
-        flat.extend_from_slice(group_pref_map[i]);
+    for (_, group) in group_pref_map {
+        flat.extend_from_slice(group);
     }
 
     flat

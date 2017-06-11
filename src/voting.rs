@@ -31,8 +31,8 @@ fn exclude_candidates<'a, 'b: 'a>(excluded: Vec<CandidateExcluded<'a>>,
     }
 }
 
-pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, num_positions: usize)
-    -> Result<Senate<'a>, Box<Error>>
+pub fn decide_election<I>(candidates: &CandidateMap, ballot_stream: I, num_positions: usize)
+    -> Result<Senate, Box<Error>>
     where I: IntoIterator<Item=IOBallot>
 {
     let mut result = Senate::new();
@@ -60,7 +60,7 @@ pub fn decide_election<'a, I>(candidates: &'a CandidateMap, ballot_stream: I, nu
     let mut vote_map = VoteMap::new(candidates)?;
 
     // Allocate first preference votes.
-    for ballot_ref in ballots.iter_mut() {
+    for ballot_ref in &mut ballots {
         vote_map.add(0, ballot_ref);
     }
 

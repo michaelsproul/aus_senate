@@ -69,7 +69,7 @@ impl <'a> VoteMap<'a> {
                 return Err(format!("Candidate ID {} appears more than once", id));
             }
         }
-        debug_assert!(v.info.len() == candidates.len());
+        debug_assert_eq!(v.info.len(), candidates.len());
         Ok(v)
     }
 
