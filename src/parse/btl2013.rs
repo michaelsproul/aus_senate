@@ -3,7 +3,7 @@ use super::prelude::*;
 /// Below the line voting map. Maps (batch, paper) pairs to preferences.
 pub type BelowTheLine = HashMap<(u32, u32), PrefMap>;
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 struct BTLRow {
     candidate_id: u32,
     preference: Option<u32>,
@@ -16,7 +16,7 @@ pub fn parse<R: Read>(input: R) -> Result<BelowTheLine, Box<Error>> {
     let mut invalid_votes = HashSet::new();
     let mut reader = ::csv::Reader::from_reader(input);
 
-    for raw_row in reader.decode::<BTLRow>() {
+    for raw_row in reader.deserialize::<BTLRow>() {
         let row = raw_row?;
         let vote_id = (row.batch, row.paper);
         match row.preference {

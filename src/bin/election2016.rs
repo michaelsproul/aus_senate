@@ -1,9 +1,7 @@
-#[macro_use]
-extern crate aus_senate;
+#[macro_use] extern crate aus_senate;
 extern crate csv;
-extern crate rustc_serialize;
-#[macro_use]
-extern crate log;
+#[macro_use] extern crate serde_derive;
+#[macro_use] extern crate log;
 extern crate env_logger;
 
 use std::error::Error;
@@ -17,7 +15,7 @@ use aus_senate::voting::*;
 use aus_senate::util::*;
 use aus_senate::ballot_parse::*;
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 struct CandidateRow {
     txn_nm: String,
     nom_ty: String,
@@ -26,14 +24,14 @@ struct CandidateRow {
     ticket: String,
     ballot_position: u32,
     surname: String,
-    other_names: String,
-    party: String,
+    ballot_given_nm: String,
+    party_ballot_nm: String,
     occupation: String,
     address_1: String,
     address_2: String,
     postcode: String,
     suburb: String,
-    address_state: String,
+    address_state_ab: String,
     contact_work_ph: String,
     contact_home_ph: String,
     postal_address_1: String,
@@ -42,7 +40,7 @@ struct CandidateRow {
     postal_postcode: String,
     contact_fax: String,
     postal_state_ab: String,
-    contact_mobile: String,
+    contact_mobile_no: String,
     contact_email: String,
 }
 
@@ -50,7 +48,7 @@ fn parse_candidates_file<R: Read>(input: R) -> Result<Vec<Candidate>, Box<Error>
     let mut result = vec![];
     let mut reader = csv::Reader::from_reader(input);
 
-    for (id, raw_row) in reader.decode::<CandidateRow>().enumerate() {
+    for (id, raw_row) in reader.deserialize::<CandidateRow>().enumerate() {
         let row = raw_row?;
         if row.nom_ty != "S" {
             continue;
@@ -58,9 +56,9 @@ fn parse_candidates_file<R: Read>(input: R) -> Result<Vec<Candidate>, Box<Error>
         result.push(Candidate {
             id: id as u32,
             surname: row.surname,
-            other_names: row.other_names,
+            other_names: row.ballot_given_nm,
             group_name: row.ticket,
-            party: row.party,
+            party: row.party_ballot_nm,
             state: row.state_ab,
         });
     }
@@ -110,9 +108,11 @@ fn main_with_result() -> Result<(), Box<Error>> {
     debug!("Num groups: {}", groups.len());
     trace!("Groups: {:#?}", groups);
 
-    let prefs_file = open_aec_csv(prefs_file_name)?;
+    let prefs_file = File::open(prefs_file_name)?;
 
-    let mut csv_reader = csv::Reader::from_reader(prefs_file);
+    let mut csv_reader = csv::ReaderBuilder::new()
+        .comment(Some('-' as u8))
+        .from_reader(prefs_file);
     let ballots_iter = parse_preferences_file!(csv_reader, &groups, &candidate_ids, &constraints);
 
     let election_result = decide_election(&candidates, ballots_iter, num_candidates)?;

@@ -3,7 +3,7 @@ use util::*;
 /// Record of a candidate's vote tally at each iteration of the algorithm.
 ///
 /// Used primarily to break ties.
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
+#[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct VoteLog {
     log: Vec<Int>
 }
@@ -35,7 +35,7 @@ impl VoteLog {
     }
 
     pub fn latest(&self) -> &Int {
-        self.maybe_latest().unwrap()
+        unwrap!(self.maybe_latest())
     }
 }
 

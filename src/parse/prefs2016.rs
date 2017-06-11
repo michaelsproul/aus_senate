@@ -2,13 +2,19 @@ use csv;
 use group::Group;
 use super::prelude::*;
 
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 pub struct PrefRow {
+    #[serde(rename = "ElectorateNm")]
     electorate_name: String,
+    #[serde(rename = "VoteCollectionPointNm")]
     vote_collection_point: String,
+    #[serde(rename = "VoteCollectionPointId")]
     vote_collection_point_id: String,
+    #[serde(rename = "BatchNo")]
     batch_num: String,
+    #[serde(rename = "PaperNo")]
     paper_num: String,
+    #[serde(rename = "Preferences")]
     preferences: String,
 }
 
@@ -29,7 +35,7 @@ macro_rules! parse_preferences_file {
     ($reader:expr, $groups:expr, $candidates:expr, $constraints:expr) => {{
         use $crate::parse::prefs2016::{PrefRow, parse_single_ballot};
         $reader
-            .decode::<PrefRow>()
+            .deserialize::<PrefRow>()
             .map(|raw_row| parse_single_ballot(raw_row, $groups, $candidates, $constraints))
     }}
 }

@@ -19,6 +19,7 @@ macro_rules! frac {
 }
 
 /// Open an AEC CSV file for reading, whilst chomping the first line (a comment).
+// FIXME: consider using the CSV reader's comment functionality.
 pub fn open_aec_csv(filename: &str) -> io::Result<BufReader<File>> {
     let f = File::open(filename)?;
     let mut r = BufReader::new(f);

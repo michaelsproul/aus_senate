@@ -1,6 +1,5 @@
 extern crate aus_senate;
 extern crate csv;
-extern crate rustc_serialize;
 
 use std::env;
 use std::error::Error;

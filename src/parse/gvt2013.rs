@@ -4,7 +4,7 @@ use super::prelude::*;
 pub type GVT = HashMap<String, HashMap<String, Vec<CandidateId>>>;
 
 /// Holy moley.
-#[derive(RustcDecodable, Debug)]
+#[derive(Deserialize, Debug)]
 struct GVTRow {
     state: String,
     owner_group: u32,
@@ -27,7 +27,7 @@ pub fn parse<R: Read>(input: R) -> Result<GVT, Box<Error>> {
 
     let mut reader = ::csv::Reader::from_reader(input);
 
-    for result in reader.decode::<GVTRow>() {
+    for result in reader.deserialize::<GVTRow>() {
         let row = result?;
         let ticket_map = data.entry(row.state).or_insert_with(HashMap::new);
         let pref_map = ticket_map.entry(row.owner_ticket).or_insert_with(BTreeMap::new);
