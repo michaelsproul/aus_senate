@@ -12,7 +12,6 @@ use std::fs::File;
 use aus_senate::group::*;
 use aus_senate::candidate::*;
 use aus_senate::voting::*;
-use aus_senate::util::*;
 use aus_senate::ballot_parse::*;
 
 #[derive(Deserialize, Debug)]
