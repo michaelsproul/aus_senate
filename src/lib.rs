@@ -5,16 +5,21 @@
 #[cfg(feature = "osx_mem_profile")]
 extern crate alloc_system;
 
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate log;
 extern crate env_logger;
 extern crate csv;
 extern crate gmp;
-#[macro_use] extern crate text_io;
+#[macro_use]
+extern crate text_io;
 extern crate serde;
-#[macro_use] extern crate serde_derive;
-#[macro_use] extern crate unwrap;
+#[macro_use]
+extern crate serde_derive;
+#[macro_use]
+extern crate unwrap;
 
-#[macro_use] pub mod util;
+#[macro_use]
+pub mod util;
 pub mod candidate;
 pub mod group;
 pub mod ballot;

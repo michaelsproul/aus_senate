@@ -56,7 +56,7 @@ fn new_transfer_map<'a>() -> TransferMap<'a> {
     map
 }
 
-impl <'a> VoteMap<'a> {
+impl<'a> VoteMap<'a> {
     pub fn new(candidates: &'a CandidateMap) -> Result<VoteMap<'a>, String> {
         let mut v = VoteMap {
             info: HashMap::new(),
@@ -90,7 +90,8 @@ impl <'a> VoteMap<'a> {
 
     /// Get the IDs of all candidates whose vote exceeds the quota.
     pub fn get_candidates_with_quota(&self, quota: &Int) -> Vec<CandidateId> {
-        let mut candidates_with_quota = self.info.iter()
+        let mut candidates_with_quota = self.info
+            .iter()
             .filter(|&(_, info)| !info.eliminated)
             .map(|(id, info)| (id, info.votes.latest()))
             .filter(|&(_, votes)| votes >= quota)
@@ -139,8 +140,10 @@ impl <'a> VoteMap<'a> {
 
         // Ask the user...
         println!("Uhoh, there's been a tie for last...");
-        println!("Which of these hapless candidates would you like to use your ill-gotten \
-                  faux-democratic power to exclude?");
+        println!(
+            "Which of these hapless candidates would you like to use your ill-gotten \
+             faux-democratic power to exclude?"
+        );
         for (idx, candidate) in hist_min_candidates.iter().enumerate() {
             println!("{}: {:?}", idx, self.candidates[candidate]);
         }
@@ -157,7 +160,7 @@ impl <'a> VoteMap<'a> {
     }
 
     pub fn find_next_valid_preference(&self, b: &Ballot) -> Option<usize> {
-        for (i, cand) in b.prefs[b.current .. ].iter().enumerate() {
+        for (i, cand) in b.prefs[b.current..].iter().enumerate() {
             if !self.info[cand].eliminated {
                 return Some(b.current + i);
             }
@@ -169,7 +172,7 @@ impl <'a> VoteMap<'a> {
         self.candidates_remaining().count()
     }
 
-    fn candidates_remaining<'b>(&'b self) -> impl Iterator<Item=(CandidateId, &'b VoteInfo<'a>)> {
+    fn candidates_remaining<'b>(&'b self) -> impl Iterator<Item = (CandidateId, &'b VoteInfo<'a>)> {
         self.info
             .iter()
             .filter(|&(_, info)| !info.eliminated)
@@ -180,10 +183,12 @@ impl <'a> VoteMap<'a> {
         self.info
             .into_iter()
             .filter(|&(_, ref info)| !info.eliminated)
-            .map(|(id, info)| CandidateElected {
-                id: id,
-                votes: info.votes.latest().clone(),
-                transfers: vec![],
+            .map(|(id, info)| {
+                CandidateElected {
+                    id: id,
+                    votes: info.votes.latest().clone(),
+                    transfers: vec![],
+                }
             })
             .collect()
     }
@@ -201,10 +206,17 @@ impl <'a> VoteMap<'a> {
             let incr = ballot_value(&transfer_val, &ballots);
             info.votes.update_vote(idx, incr.clone());
             if !incr.is_zero() {
-                trace!("+{:?} votes for {:?}, brings total to {:?}", incr, self.candidates[&continuing_id], info.votes.latest());
+                trace!(
+                    "+{:?} votes for {:?}, brings total to {:?}",
+                    incr,
+                    self.candidates[&continuing_id],
+                    info.votes.latest()
+                );
             }
 
-            let bucket = info.ballots.entry(transfer_val.clone()).or_insert_with(Vec::new);
+            let bucket = info.ballots
+                .entry(transfer_val.clone())
+                .or_insert_with(Vec::new);
             bucket.extend(ballots);
         }
     }
@@ -240,7 +252,7 @@ impl <'a> VoteMap<'a> {
             elected.push(CandidateElected {
                 id: candidate,
                 votes: num_votes,
-                transfers: pref_transfers
+                transfers: pref_transfers,
             });
         }
 
@@ -259,23 +271,31 @@ impl <'a> VoteMap<'a> {
 
         let mut pref_transfers: Vec<_> = transfer_map
             .into_iter()
-            .map(|(transfer_val, ballots)| PreferenceTransfer(candidate, transfer_val, ballots))
+            .map(|(transfer_val, ballots)| {
+                PreferenceTransfer(candidate, transfer_val, ballots)
+            })
             .collect();
 
         // Reverse the preference transfer events so they're ordered from largest to
         // smallest transfer value.
         pref_transfers.reverse();
 
-        vec![CandidateExcluded {
-            id: candidate,
-            transfers: pref_transfers,
-        }]
+        vec![
+            CandidateExcluded {
+                id: candidate,
+                transfers: pref_transfers,
+            },
+        ]
     }
 
     pub fn print_summary(&self) {
         trace!("Vote tallies");
         for (candidate, info) in self.info.iter().filter(|&(_, i)| !i.eliminated) {
-            trace!("{:?}: {:?} votes", self.candidates[candidate], info.votes.latest());
+            trace!(
+                "{:?}: {:?} votes",
+                self.candidates[candidate],
+                info.votes.latest()
+            );
         }
     }
 }

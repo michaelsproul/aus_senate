@@ -18,7 +18,10 @@ pub fn get_group_list(candidates: &[Candidate], state: &str) -> Vec<Group> {
         }
         // Otherwise, push a new group to the list (skipping the ungrouped group).
         if c.group_name != "UG" {
-            groups.push(Group { name: c.group_name.clone(), candidate_ids: vec![c.id] });
+            groups.push(Group {
+                name: c.group_name.clone(),
+                candidate_ids: vec![c.id],
+            });
         }
     }
     groups

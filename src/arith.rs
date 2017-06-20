@@ -4,9 +4,10 @@ use util::*;
 use vote_map::*;
 
 /// Given a list of ballots, group them by next valid candidate.
-pub fn group_ballots_by_candidate<'a>(vote_map: &VoteMap<'a>, ballots: Vec<&'a mut Ballot>)
-    -> HashMap<CandidateId, Vec<&'a mut Ballot>>
-{
+pub fn group_ballots_by_candidate<'a>(
+    vote_map: &VoteMap<'a>,
+    ballots: Vec<&'a mut Ballot>,
+) -> HashMap<CandidateId, Vec<&'a mut Ballot>> {
     let mut map = HashMap::new();
 
     for ballot in ballots {

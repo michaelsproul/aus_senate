@@ -26,7 +26,7 @@ pub enum InvalidBallotErr {
     InvalidMinBelow(usize),
     InvalidMaxBelow(usize),
     InvalidStrict,
-    EmptyBallot
+    EmptyBallot,
 }
 
 /// This type is yielded from iterators used during ballot parsing.
@@ -61,12 +61,18 @@ impl Constraints {
     pub fn official() -> Constraints {
         Constraints {
             choice: PreferBelow,
-            counts: vec![MinAbove(1), MinBelow(6)]
+            counts: vec![MinAbove(1), MinBelow(6)],
         }
     }
 
-    fn check_cmp<F>(invalid: Ordering, vote_length: usize, val: usize, err: F) -> Result<(), BallotParseErr>
-        where F: Fn(usize) -> InvalidBallotErr
+    fn check_cmp<F>(
+        invalid: Ordering,
+        vote_length: usize,
+        val: usize,
+        err: F,
+    ) -> Result<(), BallotParseErr>
+    where
+        F: Fn(usize) -> InvalidBallotErr,
     {
         if vote_length.cmp(&val) == invalid {
             Err(InvalidBallot(err(vote_length)))
@@ -76,14 +82,16 @@ impl Constraints {
     }
 
     fn check_min<F>(vote_length: usize, min: usize, err: F) -> Result<(), BallotParseErr>
-        where F: Fn(usize) -> InvalidBallotErr
+    where
+        F: Fn(usize) -> InvalidBallotErr,
     {
         // good if: vote_length >= min, bad if: vote_length < min
         Constraints::check_cmp(Less, vote_length, min, err)
     }
 
     fn check_max<F>(vote_length: usize, max: usize, err: F) -> Result<(), BallotParseErr>
-            where F: Fn(usize) -> InvalidBallotErr
+    where
+        F: Fn(usize) -> InvalidBallotErr,
     {
         // good if: vote_length <= max, i.e. bad if vote_length > max
         Constraints::check_cmp(Greater, vote_length, max, err)
@@ -113,16 +121,19 @@ impl Constraints {
     }
 }
 
-fn remove_repeats_and_gaps<T>((mut map, cutoff): BallotRes<T>)
-    -> Result<BTreeMap<u32, T>, BallotParseErr>
-{
+fn remove_repeats_and_gaps<T>(
+    (mut map, cutoff): BallotRes<T>,
+) -> Result<BTreeMap<u32, T>, BallotParseErr> {
     // Search for a gap in the order of preferences.
-    let missing_pref = map.keys().zip(1..).find(|&(&pref, idx)| pref != idx).map(|(_, idx)| idx);
+    let missing_pref = map.keys()
+        .zip(1..)
+        .find(|&(&pref, idx)| pref != idx)
+        .map(|(_, idx)| idx);
 
     // Cut-off at the minimum of the provided cutoff (for doubled prefs) and any missing pref.
     let new_cutoff = match (cutoff, missing_pref) {
         (Some(prev), Some(new)) => Some(min(prev, new)),
-        (x @ Some(_), _) | (_, x) => x
+        (x @ Some(_), _) | (_, x) => x,
     };
 
     if let Some(cut) = new_cutoff {
@@ -136,8 +147,12 @@ fn remove_repeats_and_gaps<T>((mut map, cutoff): BallotRes<T>)
     }
 }
 
-pub fn parse_ballot_str(pref_string: &str, groups: &[Group], candidates: &[CandidateId], constraints: &Constraints)
--> IOBallot {
+pub fn parse_ballot_str(
+    pref_string: &str,
+    groups: &[Group],
+    candidates: &[CandidateId],
+    constraints: &Constraints,
+) -> IOBallot {
     let mut above_str: Vec<&str> = pref_string.split(',').collect();
     let below_str = above_str.split_off(groups.len());
 
@@ -154,15 +169,9 @@ pub fn parse_ballot_str(pref_string: &str, groups: &[Group], candidates: &[Candi
         (_, Ok(prefs), Err(_)) |
         (_, Err(_), Ok(prefs)) |
         (PreferAbove, Ok(prefs), Ok(_)) |
-        (PreferBelow, Ok(_), Ok(prefs)) => {
-            Ok(Ballot::single(prefs))
-        }
-        (Strict, Ok(_), Ok(_)) => {
-            Err(InvalidBallot(InvalidStrict))
-        }
-        (_, Err(e1), Err(_)) => {
-            Err(e1)
-        }
+        (PreferBelow, Ok(_), Ok(prefs)) => Ok(Ballot::single(prefs)),
+        (Strict, Ok(_), Ok(_)) => Err(InvalidBallot(InvalidStrict)),
+        (_, Err(e1), Err(_)) => Err(e1),
     }
 }
 
@@ -190,9 +199,10 @@ pub fn flatten_group_pref_map(group_pref_map: GroupPrefMap) -> Vec<CandidateId> 
     flat
 }
 
-fn create_group_pref_map<'a>(prefs: Vec<&str>, groups: &'a [Group])
-    -> Result<BallotRes<&'a [CandidateId]>, BallotParseErr>
-{
+fn create_group_pref_map<'a>(
+    prefs: Vec<&str>,
+    groups: &'a [Group],
+) -> Result<BallotRes<&'a [CandidateId]>, BallotParseErr> {
     let group_candidates = |idx| {
         let group: &'a Group = &groups[idx];
         group.candidate_ids.as_slice()
@@ -200,14 +210,16 @@ fn create_group_pref_map<'a>(prefs: Vec<&str>, groups: &'a [Group])
     create_map(prefs, group_candidates)
 }
 
-fn create_pref_map(prefs: Vec<&str>, candidates: &[CandidateId])
-    -> Result<BallotRes<CandidateId>, BallotParseErr>
-{
+fn create_pref_map(
+    prefs: Vec<&str>,
+    candidates: &[CandidateId],
+) -> Result<BallotRes<CandidateId>, BallotParseErr> {
     create_map(prefs, |idx| candidates[idx])
 }
 
 fn create_map<F, T>(prefs: Vec<&str>, func: F) -> Result<BallotRes<T>, BallotParseErr>
-    where F: Fn(usize) -> T
+where
+    F: Fn(usize) -> T,
 {
     let mut map = BTreeMap::new();
     let mut pref_cutoff = None;
@@ -217,7 +229,11 @@ fn create_map<F, T>(prefs: Vec<&str>, func: F) -> Result<BallotRes<T>, BallotPar
         let pref = match raw_pref {
             "" => continue,
             "*" | "/" => 1,
-            _ =>  raw_pref.parse::<u32>().map_err(|_| InvalidBallot(InvalidCharacter))?
+            _ => {
+                raw_pref
+                    .parse::<u32>()
+                    .map_err(|_| InvalidBallot(InvalidCharacter))?
+            }
         };
 
         let value = func(index);
@@ -229,7 +245,7 @@ fn create_map<F, T>(prefs: Vec<&str>, func: F) -> Result<BallotRes<T>, BallotPar
         if prev_value.is_some() {
             pref_cutoff = Some(match pref_cutoff {
                 Some(cutoff) => min(cutoff, pref),
-                None => pref
+                None => pref,
             });
         }
     }
@@ -248,8 +264,23 @@ mod test {
         let mut pref_map = BTreeMap::from_iter((1..10).zip(1..10));
         pref_map.insert(11, 11);
 
-        assert_eq!(remove_repeats_and_gaps((pref_map.clone(), None)).unwrap().len(), 9);
-        assert_eq!(remove_repeats_and_gaps((pref_map.clone(), Some(10))).unwrap().len(), 9);
-        assert_eq!(remove_repeats_and_gaps((pref_map.clone(), Some(5))).unwrap().len(), 4);
+        assert_eq!(
+            remove_repeats_and_gaps((pref_map.clone(), None))
+                .unwrap()
+                .len(),
+            9
+        );
+        assert_eq!(
+            remove_repeats_and_gaps((pref_map.clone(), Some(10)))
+                .unwrap()
+                .len(),
+            9
+        );
+        assert_eq!(
+            remove_repeats_and_gaps((pref_map.clone(), Some(5)))
+                .unwrap()
+                .len(),
+            4
+        );
     }
 }

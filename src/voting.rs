@@ -11,29 +11,37 @@ pub fn compute_quota(num_votes: u32, num_positions: usize) -> Int {
     frac!(num_votes, num_positions + 1).ceil()
 }
 
-fn elect_candidates<'a, 'b: 'a>(elected: Vec<CandidateElected<'a>>,
-                        result: &mut Senate<'b>,
-                        preference_transfers: &mut VecDeque<PreferenceTransfer<'a>>,
-                        candidates: &'b CandidateMap) -> () {
-    for CandidateElected { id, votes, transfers } in elected {
-        trace!("Elected {:?} with {:?} votes", candidates[&id], votes);
-        result.add_senator(id, votes, candidates);
-        preference_transfers.extend(transfers);
+fn elect_candidates<'a, 'b: 'a>(
+    elected: Vec<CandidateElected<'a>>,
+    result: &mut Senate<'b>,
+    preference_transfers: &mut VecDeque<PreferenceTransfer<'a>>,
+    candidates: &'b CandidateMap,
+) {
+    for c in elected {
+        trace!("Elected {:?} with {:?} votes", candidates[&c.id], c.votes);
+        result.add_senator(c.id, c.votes, candidates);
+        preference_transfers.extend(c.transfers);
     }
 }
 
-fn exclude_candidates<'a, 'b: 'a>(excluded: Vec<CandidateExcluded<'a>>,
-                        preference_transfers: &mut VecDeque<PreferenceTransfer<'a>>,
-                        candidates: &'b CandidateMap) -> () {
+fn exclude_candidates<'a, 'b: 'a>(
+    excluded: Vec<CandidateExcluded<'a>>,
+    preference_transfers: &mut VecDeque<PreferenceTransfer<'a>>,
+    candidates: &'b CandidateMap,
+) {
     for CandidateExcluded { id, transfers } in excluded {
         info!("Excluded {:?}", candidates[&id]);
         preference_transfers.extend(transfers);
     }
 }
 
-pub fn decide_election<I>(candidates: &CandidateMap, ballot_stream: I, num_positions: usize)
-    -> Result<Senate, Box<Error>>
-    where I: IntoIterator<Item=IOBallot>
+pub fn decide_election<I>(
+    candidates: &CandidateMap,
+    ballot_stream: I,
+    num_positions: usize,
+) -> Result<Senate, Box<Error>>
+where
+    I: IntoIterator<Item = IOBallot>,
 {
     let mut result = Senate::new();
 
@@ -70,17 +78,25 @@ pub fn decide_election<I>(candidates: &CandidateMap, ballot_stream: I, num_posit
 
     info!("Count #1");
     let elected_on_first_prefs = vote_map.elect_candidates_with_quota(&quota);
-    elect_candidates(elected_on_first_prefs, &mut result, &mut preference_transfers, candidates);
+    elect_candidates(
+        elected_on_first_prefs,
+        &mut result,
+        &mut preference_transfers,
+        candidates,
+    );
 
     for i in 2.. {
         info!("Count #{}", i);
 
         // Transfer pending preferences.
-        let transfer = preference_transfers.pop_front()
-            .expect("election should terminate before running out of preferences to transfer");
+        let transfer = preference_transfers.pop_front().expect(
+            "election should terminate before running out of preferences to transfer",
+        );
 
-        trace!("Transferring preferences for {:?} at value {:?}",
-            candidates[&transfer.0], transfer.1
+        trace!(
+            "Transferring preferences for {:?} at value {:?}",
+            candidates[&transfer.0],
+            transfer.1
         );
         vote_map.transfer_preferences(i - 1, transfer);
 
@@ -94,7 +110,12 @@ pub fn decide_election<I>(candidates: &CandidateMap, ballot_stream: I, num_posit
             let positions_remaining = num_positions - result.num_elected();
             if vote_map.num_candidates_remaining() == positions_remaining {
                 let remaining = vote_map.elect_remaining();
-                elect_candidates(remaining, &mut result, &mut preference_transfers, candidates);
+                elect_candidates(
+                    remaining,
+                    &mut result,
+                    &mut preference_transfers,
+                    candidates,
+                );
                 break;
             }
 

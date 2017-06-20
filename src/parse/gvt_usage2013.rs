@@ -13,7 +13,7 @@ struct GVTUsageRow {
     ticket_percentage: String,
     non_ticket_votes: String,
     non_ticket_percentage: String,
-    total_votes: String
+    total_votes: String,
 }
 
 pub fn parse<R: Read>(input: R) -> Result<GVTUsage, Box<Error>> {

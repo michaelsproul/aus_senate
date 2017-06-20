@@ -8,7 +8,7 @@ struct BTLRow {
     candidate_id: u32,
     preference: Option<u32>,
     batch: u32,
-    paper: u32
+    paper: u32,
 }
 
 pub fn parse<R: Read>(input: R) -> Result<BelowTheLine, Box<Error>> {

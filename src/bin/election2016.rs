@@ -1,7 +1,10 @@
-#[macro_use] extern crate aus_senate;
+#[macro_use]
+extern crate aus_senate;
 extern crate csv;
-#[macro_use] extern crate serde_derive;
-#[macro_use] extern crate log;
+#[macro_use]
+extern crate serde_derive;
+#[macro_use]
+extern crate log;
 extern crate env_logger;
 
 use std::error::Error;
@@ -66,7 +69,8 @@ fn parse_candidates_file<R: Read>(input: R) -> Result<Vec<Candidate>, Box<Error>
 }
 
 fn get_candidate_id_list(candidates: &[Candidate], state: &str) -> Vec<CandidateId> {
-    candidates.iter()
+    candidates
+        .iter()
         .filter(|c| &c.state == state)
         .map(|c| c.id)
         .collect()
@@ -87,7 +91,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
     let state = &args[3];
     let num_candidates = match args.get(4) {
         Some(x) => x.parse::<usize>()?,
-        None => 12
+        None => 12,
     };
 
     let candidates_file = File::open(candidates_file_name)?;
@@ -118,7 +122,13 @@ fn main_with_result() -> Result<(), Box<Error>> {
 
     println!("=== Elected ===");
     for &(c, ref votes) in &election_result.senators {
-        println!("{} {} ({}) [{} votes]", c.other_names, c.surname, c.party, votes);
+        println!(
+            "{} {} ({}) [{} votes]",
+            c.other_names,
+            c.surname,
+            c.party,
+            votes
+        );
     }
 
     if election_result.tied {

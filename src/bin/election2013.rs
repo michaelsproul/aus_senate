@@ -30,7 +30,10 @@ fn main_with_result() -> Result<(), Box<Error>> {
     let args: Vec<String> = env::args().collect();
 
     if args.len() != 6 {
-        println!("Usage: ./election2013 <candidates file> <gvt file> <gvt usage file> <btl votes> <state>");
+        println!(
+            "Usage: ./election2013 <candidates file> <gvt file> <gvt usage file> \
+             <btl votes> <state>"
+        );
         Err("invalid command line arguments.".to_string())?
     }
 

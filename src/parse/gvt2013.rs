@@ -18,7 +18,7 @@ struct GVTRow {
     ballot_pos: u32,
     party_ab: String,
     party_name: String,
-    preference: u32
+    preference: u32,
 }
 
 // NOTE: This is a tad slow, but it beats mucking around with manual row groupings.
@@ -30,7 +30,9 @@ pub fn parse<R: Read>(input: R) -> Result<GVT, Box<Error>> {
     for result in reader.deserialize::<GVTRow>() {
         let row = result?;
         let ticket_map = data.entry(row.state).or_insert_with(HashMap::new);
-        let pref_map = ticket_map.entry(row.owner_ticket).or_insert_with(BTreeMap::new);
+        let pref_map = ticket_map
+            .entry(row.owner_ticket)
+            .or_insert_with(BTreeMap::new);
         pref_map.insert(row.preference, row.candidate_id);
     }
 

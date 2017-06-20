@@ -5,14 +5,12 @@ use util::*;
 /// Used primarily to break ties.
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
 pub struct VoteLog {
-    log: Vec<Int>
+    log: Vec<Int>,
 }
 
 impl VoteLog {
     pub fn new() -> Self {
-        VoteLog {
-            log: vec![]
-        }
+        VoteLog { log: vec![] }
     }
 
     pub fn update_vote(&mut self, idx: usize, vote: Int) {

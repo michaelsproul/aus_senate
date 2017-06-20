@@ -18,7 +18,12 @@ pub struct PrefRow {
     preferences: String,
 }
 
-pub fn parse_single_ballot(raw_row: csv::Result<PrefRow>, groups: &[Group], candidates: &[CandidateId], constraints: &Constraints) -> IOBallot {
+pub fn parse_single_ballot(
+    raw_row: csv::Result<PrefRow>,
+    groups: &[Group],
+    candidates: &[CandidateId],
+    constraints: &Constraints,
+) -> IOBallot {
     match raw_row {
         Ok(row) => parse_ballot_str(&row.preferences, groups, candidates, constraints),
         Err(e) => Err(InputError(From::from(e))),
