@@ -17,6 +17,7 @@ extern crate serde;
 extern crate serde_derive;
 #[macro_use]
 extern crate unwrap;
+extern crate itertools;
 
 #[macro_use]
 pub mod util;

@@ -4,6 +4,7 @@ use util::*;
 use arith::*;
 use vote_log::*;
 
+use itertools::Itertools;
 use std::mem;
 
 /// Map from transfer values to ballots with that transfer value.
@@ -132,7 +133,7 @@ impl<'a> VoteMap<'a> {
             .into_iter()
             .filter(|&(_, info)| &info.votes == historical_min)
             .map(|(candidate, _)| candidate)
-            .collect();
+            .sorted();
 
         if hist_min_candidates.len() == 1 {
             return hist_min_candidates[0];
