@@ -18,7 +18,7 @@ def sha256_file(filename):
     with open(filename, "rb") as f:
         return sha256sum(f)
 
-def fetch():
+def fetch(states):
     # Load data sources file
     sources_file = "data_sources.json"
 
@@ -31,15 +31,24 @@ def fetch():
 
     # Download/verify each required file
     for (filename, info) in sources.items():
+        state = info.get("state")
+        if state is not None and state not in states.keys():
+            continue
+
         csv_file = os.path.join(dest_dir, filename)
+        zip_file = os.path.join(dest_dir, filename + ".zip")
 
-        checksum = info.get("sha256")
+        csv_checksum = info.get("sha256")
+        zip_checksum = info.get("zip-sha256")
 
-        if os.path.exists(csv_file) and checksum_ok(csv_file, checksum):
+        if os.path.exists(csv_file) and checksum_ok(csv_file, csv_checksum):
             print("Using cached version of {}".format(filename))
             continue
 
-        # TODO: maybe check for cached zip
+        if info.get("zipped") and os.path.exists(zip_file) and checksum_ok(zip_file, zip_checksum):
+            print("Using cached zip version of {}".format(filename))
+            extract_zip(zip_file, dest_dir, csv_file, csv_checksum, info)
+            continue
 
         print("Downloading {}...".format(filename))
         res = requests.get(info["url"])
@@ -48,27 +57,19 @@ def fetch():
             raise Exception("Download error!")
 
         if info.get("zipped"):
-            save_zipped(csv_file, res.content, checksum, dest_dir, filename, info)
+            save_file(zip_file, res.content, zip_checksum)
+            extract_zip(zip_file, dest_dir, csv_file, csv_checksum, info)
         else:
-            save_nonzipped(csv_file, res.content, checksum)
+            save_file(csv_file, res.content, checksum)
 
-
-def save_nonzipped(csv_file, content, checksum):
-    with open(csv_file, "wb") as output:
+def save_file(filename, content, checksum):
+    with open(filename, "wb") as output:
         output.write(content)
 
-    if not checksum_ok(csv_file, checksum):
+    if not checksum_ok(filename, checksum):
         raise Exception("Downloaded file has the wrong checksum")
 
-def save_zipped(csv_file, content, checksum, dest_dir, filename, info):
-    zip_file = os.path.join(dest_dir, filename + ".zip")
-
-    with open(zip_file, "wb") as z:
-        z.write(content)
-
-    if not checksum_ok(zip_file, info["zip-sha256"]):
-        raise Exception("Downloaded zip file has the wrong checksum")
-
+def extract_zip(zip_file, dest_dir, csv_file, csv_checksum, info):
     with zipfile.ZipFile(zip_file, "r") as z:
         z.extractall(dest_dir)
 
@@ -76,7 +77,7 @@ def save_zipped(csv_file, content, checksum, dest_dir, filename, info):
 
     os.rename(temp_file, csv_file)
 
-    if not checksum_ok(csv_file, checksum):
+    if not checksum_ok(csv_file, csv_checksum):
         raise Exception("CSV file from within ZIP has the wrong checksum")
 
 def checksum_ok(filename: str, checksum: str) -> bool:

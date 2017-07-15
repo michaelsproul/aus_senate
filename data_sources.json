@@ -7,6 +7,7 @@
         "sha256": "7fab2c481db81a779d955ebd4d8f525bc28211013e21ac0977b16c558546bc3b"
     },
     "ACT.csv": {
+        "state": "ACT",
         "zipped": true,
         "url": "http://results.aec.gov.au/20499/Website/External/aec-senate-formalpreferences-20499-ACT.zip",
         "inner-file": "aec-senate-formalpreferences-20499-ACT.csv",
@@ -14,6 +15,7 @@
         "sha256": "83c05e9684fea885db104febd81c28aa22c142b04bc8b9e6741fb2db35a4bd29"
     },
     "NSW.csv": {
+        "state": "NSW",
         "zipped": true,
         "url": "http://results.aec.gov.au/20499/Website/External/aec-senate-formalpreferences-20499-NSW.zip",
         "inner-file": "aec-senate-formalpreferences-20499-NSW.csv",
@@ -21,6 +23,7 @@
         "sha256": "d425175863019284a7c04c2e3795b8a7e6b18aacabc239e6859912c678489a18"
     },
     "NT.csv": {
+        "state": "NT",
         "zipped": true,
         "url": "http://results.aec.gov.au/20499/Website/External/aec-senate-formalpreferences-20499-NT.zip",
         "inner-file": "aec-senate-formalpreferences-20499-NT.csv",
@@ -28,6 +31,7 @@
         "sha256": "90cf9de0f9e18ba784cad757111e3e02fcbb66512e884dc50aa547f66e4846b7"
     },
     "QLD.csv": {
+        "state": "QLD",
         "zipped": true,
         "url": "http://results.aec.gov.au/20499/Website/External/aec-senate-formalpreferences-20499-QLD.zip",
         "inner-file": "aec-senate-formalpreferences-20499-QLD.csv",
@@ -35,6 +39,7 @@
         "sha256": "3c85e023a576d48fa13634caf98d4e4e48470da170a032c37457c99f89a00aea"
     },
     "SA.csv": {
+        "state": "SA",
         "zipped": true,
         "url": "http://results.aec.gov.au/20499/Website/External/aec-senate-formalpreferences-20499-SA.zip",
         "inner-file": "aec-senate-formalpreferences-20499-SA.csv",
@@ -42,6 +47,7 @@
         "sha256": "430a4277a81513020110ee2eff7c4bfee6729611adee3ca62aa97dfaffeafe0e"
     },
     "TAS.csv": {
+        "state": "TAS",
         "zipped": true,
         "url": "http://results.aec.gov.au/20499/Website/External/aec-senate-formalpreferences-20499-TAS.zip",
         "inner-file": "aec-senate-formalpreferences-20499-TAS.csv",
@@ -49,6 +55,7 @@
         "sha256": "3c50f9f61d0356fba9738f40bcc0342eb4a360dea55e3c0bac3988cea679ab0c"
     },
     "VIC.csv": {
+        "state": "VIC",
         "zipped": true,
         "url": "http://results.aec.gov.au/20499/Website/External/aec-senate-formalpreferences-20499-VIC.zip",
         "inner-file": "aec-senate-formalpreferences-20499-VIC.csv",
@@ -56,6 +63,7 @@
         "sha256": "8d45ee8e1f9f836e483e4e186f56f726cfce704a1ad04ac7a96c2da7d1ff4a61"
     },
     "WA.csv": {
+        "state": "WA",
         "zipped": true,
         "url": "http://results.aec.gov.au/20499/Website/External/aec-senate-formalpreferences-20499-WA.zip",
         "inner-file": "aec-senate-formalpreferences-20499-WA.csv",
