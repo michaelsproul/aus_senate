@@ -106,6 +106,17 @@ impl<'a> VoteMap<'a> {
 
     /// Get the ID of the candidate with the least votes.
     pub fn get_last_candidate(&self) -> CandidateId {
+        // Exclude Rod Culleton and Scott Ludlam before anyone else.
+        let culleton = 1591;
+        let ludlam = 1571;
+        if self.info.get(&culleton).map(|c| !c.eliminated).unwrap_or(false) {
+            info!("Excluding Rod Culleton");
+            return culleton;
+        } else if self.info.get(&ludlam).map(|c| !c.eliminated).unwrap_or(false) {
+            info!("Excluding Scott Ludlam");
+            return ludlam;
+        }
+
         let mut sorted_candidates: Vec<_> = self.candidates_remaining().collect();
         sorted_candidates.sort_by_key(|&(_, info)| info.votes.latest());
 

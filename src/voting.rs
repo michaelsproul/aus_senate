@@ -76,6 +76,12 @@ where
 
     let mut preference_transfers = VecDeque::new();
 
+    // Exclude Ludlam and Culleton (FIXME: this is horribly hacky).
+    let culleton = vote_map.exclude_candidates();
+    let ludlam = vote_map.exclude_candidates();
+    exclude_candidates(culleton, &mut preference_transfers, candidates);
+    exclude_candidates(ludlam, &mut preference_transfers, candidates);
+
     info!("Count #1");
     let elected_on_first_prefs = vote_map.elect_candidates_with_quota(&quota);
     elect_candidates(
