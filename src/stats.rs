@@ -23,7 +23,7 @@ impl Stats {
     }
 
     pub fn record_invalid_vote(&mut self, err: InvalidBallotErr) {
-        let mut err_count = self.invalid_votes.entry(err.erase_detail()).or_insert(0);
+        let err_count = self.invalid_votes.entry(err.erase_detail()).or_insert(0);
         *err_count += 1;
     }
 

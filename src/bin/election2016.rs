@@ -118,7 +118,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
         .from_reader(prefs_file);
     let ballots_iter = parse_preferences_file!(csv_reader, &groups, &candidate_ids, &constraints);
 
-    let election_result = decide_election(&candidates, ballots_iter, num_candidates)?;
+    let election_result = decide_election(&candidates, &[], ballots_iter, num_candidates)?;
 
     println!("=== Elected ===");
     for &(c, ref votes) in &election_result.senators {

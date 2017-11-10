@@ -64,7 +64,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
         Ok(Ballot::single(flatten_pref_map(pref_map)))
     }));
 
-    let result = decide_election(&candidates, ballots, 6)?;
+    let result = decide_election(&candidates, &[], ballots, 6)?;
 
     for &(s, _) in &result.senators {
         println!("Elected: {} {} ({})", s.other_names, s.surname, s.party);

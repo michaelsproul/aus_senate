@@ -35,11 +35,12 @@ fn exclude_candidates<'a, 'b: 'a>(
     }
 }
 
-pub fn decide_election<I>(
-    candidates: &CandidateMap,
+pub fn decide_election<'a, I>(
+    candidates: &'a CandidateMap,
+    disqualified_candidates: &[CandidateId],
     ballot_stream: I,
     num_positions: usize,
-) -> Result<Senate, Box<Error>>
+) -> Result<Senate<'a>, Box<Error>>
 where
     I: IntoIterator<Item = IOBallot>,
 {
@@ -75,6 +76,16 @@ where
     let quota = compute_quota(result.stats.num_valid_votes(), num_positions);
 
     let mut preference_transfers = VecDeque::new();
+
+    // Exclude all the disqualified candidates.
+    info!("Excluding disqualified candidates");
+    for &disqual_id in disqualified_candidates {
+        let CandidateExcluded { id, transfers } = vote_map.exclude_candidate_by_id(disqual_id);
+        info!("Disqualified: {:?}", candidates[&id]);
+        for transfer in transfers {
+            vote_map.transfer_preferences(0, transfer);
+        }
+    }
 
     info!("Count #1");
     let elected_on_first_prefs = vote_map.elect_candidates_with_quota(&quota);

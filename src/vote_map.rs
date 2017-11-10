@@ -79,7 +79,7 @@ impl<'a> VoteMap<'a> {
         let candidate = ballot.prefs[ballot.current];
 
         let all_info = &mut self.info;
-        let mut info = all_info.get_mut(&candidate).expect("Candidate not found");
+        let info = all_info.get_mut(&candidate).expect("Candidate not found");
 
         // Add to the candidate's tally.
         info.votes.update_vote(idx, Int::from(ballot.weight));
@@ -260,10 +260,8 @@ impl<'a> VoteMap<'a> {
         elected
     }
 
-    // TODO: bulk exclusions.
-    pub fn exclude_candidates(&mut self) -> Vec<CandidateExcluded<'a>> {
-        let candidate = self.get_last_candidate();
-
+    /// Panics if the `id` is not the `CandidateId` of a real candidate.
+    pub fn exclude_candidate_by_id(&mut self, candidate: CandidateId) -> CandidateExcluded<'a> {
         let info = self.info.get_mut(&candidate).unwrap();
 
         info.eliminated = true;
@@ -281,12 +279,16 @@ impl<'a> VoteMap<'a> {
         // smallest transfer value.
         pref_transfers.reverse();
 
-        vec![
-            CandidateExcluded {
-                id: candidate,
-                transfers: pref_transfers,
-            },
-        ]
+        CandidateExcluded {
+            id: candidate,
+            transfers: pref_transfers,
+        }
+    }
+
+    // TODO: bulk exclusions.
+    pub fn exclude_candidates(&mut self) -> Vec<CandidateExcluded<'a>> {
+        let candidate = self.get_last_candidate();
+        vec![self.exclude_candidate_by_id(candidate)]
     }
 
     pub fn print_summary(&self) {

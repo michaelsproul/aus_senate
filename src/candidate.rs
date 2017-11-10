@@ -15,6 +15,13 @@ pub struct Candidate {
     pub state: String,
 }
 
+/// User-input description of a candidate with first name and surname.
+#[derive(Clone)]
+pub struct CandidateName {
+    pub first: String,
+    pub last: String,
+}
+
 impl Debug for Candidate {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
         write!(fmt, "{} {}", self.other_names, self.surname)
@@ -30,4 +37,18 @@ pub fn get_state_candidates(all_candidates: &[Candidate], state: &str) -> Candid
         result.insert(c.id, c.clone());
     }
     result
+}
+
+pub fn get_candidate_ids(
+    candidate_names: &[CandidateName],
+    candidates: &CandidateMap
+) -> Vec<CandidateId> {
+    candidate_names.iter()
+        .flat_map(|name| {
+            candidates.iter().find(|&(_, cand)| {
+                cand.surname.to_lowercase() == name.last.to_lowercase() &&
+                cand.other_names.to_lowercase().contains(&name.first.to_lowercase())
+            }).map(|(&id, _)| id)
+        })
+        .collect()
 }
