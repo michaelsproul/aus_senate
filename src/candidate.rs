@@ -39,7 +39,17 @@ pub fn get_state_candidates(all_candidates: &[Candidate], state: &str) -> Candid
     result
 }
 
-pub fn get_candidate_ids(
+/// Get the list of candidate IDs, in canonical order (used for parsing).
+pub fn get_candidate_id_list(all_candidates: &[Candidate], state: &str) -> Vec<CandidateId> {
+    all_candidates
+        .iter()
+        .filter(|c| &c.state == state)
+        .map(|c| c.id)
+        .collect()
+}
+
+/// Convert a list of candidate names into a list of candidate IDs.
+pub fn find_candidates_with_names(
     candidate_names: &[CandidateName],
     candidates: &CandidateMap
 ) -> Vec<CandidateId> {

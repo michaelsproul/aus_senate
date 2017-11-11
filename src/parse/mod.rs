@@ -3,7 +3,8 @@
 /// Useful imports for parsing are here.
 mod prelude;
 
-pub mod candidates;
+pub mod candidates2013;
+pub mod candidates2016;
 #[macro_use]
 pub mod prefs2016;
 pub mod gvt2013;

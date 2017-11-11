@@ -52,7 +52,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
     let btl_votes = btl2013::parse(btl_file)?;
 
     let candidates_file = open_aec_csv(candidates_file_name)?;
-    let all_candidates = candidates::parse(candidates_file)?;
+    let all_candidates = candidates2013::parse(candidates_file)?;
 
     let candidates = get_state_candidates(&all_candidates, state);
 

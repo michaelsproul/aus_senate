@@ -2,13 +2,10 @@
 extern crate aus_senate;
 extern crate csv;
 #[macro_use]
-extern crate serde_derive;
-#[macro_use]
 extern crate log;
 extern crate env_logger;
 
 use std::error::Error;
-use std::io::Read;
 use std::env;
 use std::fs::File;
 
@@ -16,65 +13,7 @@ use aus_senate::group::*;
 use aus_senate::candidate::*;
 use aus_senate::voting::*;
 use aus_senate::ballot_parse::*;
-
-#[derive(Deserialize, Debug)]
-struct CandidateRow {
-    txn_nm: String,
-    nom_ty: String,
-    state_ab: String,
-    div_nm: String,
-    ticket: String,
-    ballot_position: u32,
-    surname: String,
-    ballot_given_nm: String,
-    party_ballot_nm: String,
-    occupation: String,
-    address_1: String,
-    address_2: String,
-    postcode: String,
-    suburb: String,
-    address_state_ab: String,
-    contact_work_ph: String,
-    contact_home_ph: String,
-    postal_address_1: String,
-    postal_address_2: String,
-    postal_suburb: String,
-    postal_postcode: String,
-    contact_fax: String,
-    postal_state_ab: String,
-    contact_mobile_no: String,
-    contact_email: String,
-}
-
-fn parse_candidates_file<R: Read>(input: R) -> Result<Vec<Candidate>, Box<Error>> {
-    let mut result = vec![];
-    let mut reader = csv::Reader::from_reader(input);
-
-    for (id, raw_row) in reader.deserialize::<CandidateRow>().enumerate() {
-        let row = raw_row?;
-        if row.nom_ty != "S" {
-            continue;
-        }
-        result.push(Candidate {
-            id: id as u32,
-            surname: row.surname,
-            other_names: row.ballot_given_nm,
-            group_name: row.ticket,
-            party: row.party_ballot_nm,
-            state: row.state_ab,
-        });
-    }
-
-    Ok(result)
-}
-
-fn get_candidate_id_list(candidates: &[Candidate], state: &str) -> Vec<CandidateId> {
-    candidates
-        .iter()
-        .filter(|c| &c.state == state)
-        .map(|c| c.id)
-        .collect()
-}
+use aus_senate::parse::candidates2016;
 
 fn main_with_result() -> Result<(), Box<Error>> {
     env_logger::init()?;
@@ -95,7 +34,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
     };
 
     let candidates_file = File::open(candidates_file_name)?;
-    let all_candidates = parse_candidates_file(candidates_file)?;
+    let all_candidates = candidates2016::parse(candidates_file)?;
 
     for c in &all_candidates {
         debug!("{}: {} {} ({})", c.id, c.other_names, c.surname, c.party);
