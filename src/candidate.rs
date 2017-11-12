@@ -5,7 +5,7 @@ use std::fmt::{Debug, Formatter, Error};
 pub type CandidateId = u32;
 
 /// Description of a candidate including name and party affiliation.
-#[derive(Clone)]
+#[derive(Serialize, Clone)]
 pub struct Candidate {
     pub id: CandidateId,
     pub surname: String,
