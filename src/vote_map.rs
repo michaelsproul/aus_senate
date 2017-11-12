@@ -4,6 +4,7 @@ use util::*;
 use arith::*;
 use vote_log::*;
 
+use rand::{thread_rng, Rng};
 use itertools::Itertools;
 use std::mem;
 
@@ -139,25 +140,10 @@ impl<'a> VoteMap<'a> {
             return hist_min_candidates[0];
         }
 
-        // Ask the user...
-        println!("Uhoh, there's been a tie for last...");
-        println!(
-            "Which of these hapless candidates would you like to use your ill-gotten \
-             faux-democratic power to exclude?"
-        );
-        for (idx, candidate) in hist_min_candidates.iter().enumerate() {
-            println!("{}: {:?}", idx, self.candidates[candidate]);
-        }
-
-        let mut index: usize;
-        loop {
-            index = read!();
-            if index < hist_min_candidates.len() {
-                let candidate = hist_min_candidates[index];
-                println!("Ok, excluding {:?}", self.candidates[&candidate]);
-                return candidate;
-            }
-        }
+        // TODO: ideally we would fork the execution and check that the final result
+        // is the same for all possible exclusion choices, but for now we'll just choose
+        // randomly...
+        *thread_rng().choose(&hist_min_candidates).unwrap()
     }
 
     pub fn find_next_valid_preference(&self, b: &Ballot) -> Option<usize> {

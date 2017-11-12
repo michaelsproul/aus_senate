@@ -10,14 +10,13 @@ extern crate log;
 extern crate env_logger;
 extern crate csv;
 extern crate gmp;
-#[macro_use]
-extern crate text_io;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
 #[macro_use]
 extern crate unwrap;
 extern crate itertools;
+extern crate rand;
 
 #[macro_use]
 pub mod util;
