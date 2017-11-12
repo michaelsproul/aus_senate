@@ -153,14 +153,15 @@ pub fn parse_ballot_str(
     candidates: &[CandidateId],
     constraints: &Constraints,
 ) -> IOBallot {
-    let mut above_str: Vec<&str> = pref_string.split(',').collect();
-    let below_str = above_str.split_off(groups.len());
+    // Iterator over integer preferences.
+    let mut pref_iter = pref_string.split(',');
 
-    let above_the_line = create_group_pref_map(above_str, groups)
+    let above_the_line = create_group_pref_map(pref_iter.by_ref().take(groups.len()), groups)
         .and_then(remove_repeats_and_gaps)
         .and_then(|v| constraints.check_above(v))
         .map(flatten_group_pref_map);
-    let below_the_line = create_pref_map(below_str, candidates)
+
+    let below_the_line = create_pref_map(pref_iter, candidates)
         .and_then(remove_repeats_and_gaps)
         .and_then(|v| constraints.check_below(v))
         .map(flatten_pref_map);
@@ -199,32 +200,39 @@ pub fn flatten_group_pref_map(group_pref_map: GroupPrefMap) -> Vec<CandidateId> 
     flat
 }
 
-fn create_group_pref_map<'a>(
-    prefs: Vec<&str>,
-    groups: &'a [Group],
-) -> Result<BallotRes<&'a [CandidateId]>, BallotParseErr> {
+fn create_group_pref_map<'a, 'g, P>(
+    prefs: P,
+    groups: &'g [Group],
+) -> Result<BallotRes<&'g [CandidateId]>, BallotParseErr>
+where
+    P: Iterator<Item=&'a str>,
+{
     let group_candidates = |idx| {
-        let group: &'a Group = &groups[idx];
+        let group: &'g Group = &groups[idx];
         group.candidate_ids.as_slice()
     };
     create_map(prefs, group_candidates)
 }
 
-fn create_pref_map(
-    prefs: Vec<&str>,
+fn create_pref_map<'a, P>(
+    prefs: P,
     candidates: &[CandidateId],
-) -> Result<BallotRes<CandidateId>, BallotParseErr> {
+) -> Result<BallotRes<CandidateId>, BallotParseErr>
+where
+    P: Iterator<Item=&'a str>,
+{
     create_map(prefs, |idx| candidates[idx])
 }
 
-fn create_map<F, T>(prefs: Vec<&str>, func: F) -> Result<BallotRes<T>, BallotParseErr>
+fn create_map<'a, F, T, P>(prefs: P, func: F) -> Result<BallotRes<T>, BallotParseErr>
 where
     F: Fn(usize) -> T,
+    P: Iterator<Item=&'a str>,
 {
     let mut map = BTreeMap::new();
     let mut pref_cutoff = None;
 
-    for (index, &raw_pref) in prefs.iter().enumerate() {
+    for (index, raw_pref) in prefs.enumerate() {
 
         let pref = match raw_pref {
             "" => continue,
