@@ -5,7 +5,7 @@ pub type BelowTheLine = HashMap<(u32, u32), PrefMap>;
 
 #[derive(Deserialize, Debug)]
 struct BTLRow {
-    candidate_id: u32,
+    candidate_id: CandidateId,
     preference: Option<u32>,
     batch: u32,
     paper: u32,

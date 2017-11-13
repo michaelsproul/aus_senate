@@ -1,4 +1,5 @@
 use util::*;
+use std::mem;
 
 /// Record of a candidate's vote tally at each iteration of the algorithm.
 ///
@@ -34,6 +35,10 @@ impl VoteLog {
 
     pub fn latest(&self) -> &Int {
         unwrap!(self.maybe_latest())
+    }
+
+    pub fn clear(&mut self) {
+        mem::replace(&mut self.log, vec![]);
     }
 }
 

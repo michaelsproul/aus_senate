@@ -39,7 +39,7 @@ pub fn parse<R: Read>(input: R) -> Result<Vec<Candidate>, Box<Error>> {
             continue;
         }
         result.push(Candidate {
-            id: id as u32,
+            id: id as CandidateId,
             surname: row.surname,
             other_names: row.ballot_given_nm,
             group_name: row.ticket,

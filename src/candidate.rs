@@ -2,7 +2,7 @@ use util::*;
 use std::fmt::{Debug, Formatter, Error};
 
 /// Integer representing a candidate.
-pub type CandidateId = u32;
+pub type CandidateId = u16;
 
 /// Description of a candidate including name and party affiliation.
 #[derive(Serialize, Clone)]

@@ -11,7 +11,7 @@ struct GVTRow {
     owner_group_name: String,
     owner_ticket: String,
     ticket_num: u32,
-    candidate_id: u32,
+    candidate_id: CandidateId,
     candidate_ticket: String,
     surname: String,
     first_name: String,

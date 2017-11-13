@@ -77,13 +77,13 @@ impl<'a> VoteMap<'a> {
 
     /// Add votes to a candidate's tally according to the weight and current preference of a ballot.
     pub fn add(&mut self, idx: usize, ballot: &'a mut Ballot) {
-        let candidate = ballot.prefs[ballot.current];
+        let candidate = ballot.prefs[ballot.current()];
 
         let all_info = &mut self.info;
         let info = all_info.get_mut(&candidate).expect("Candidate not found");
 
         // Add to the candidate's tally.
-        info.votes.update_vote(idx, Int::from(ballot.weight));
+        info.votes.update_vote(idx, Int::from(ballot.weight()));
 
         // Add the ballot to the appropriate bucket.
         let bucket = info.ballots.get_mut(&self.one).unwrap();
@@ -147,9 +147,9 @@ impl<'a> VoteMap<'a> {
     }
 
     pub fn find_next_valid_preference(&self, b: &Ballot) -> Option<usize> {
-        for (i, cand) in b.prefs[b.current..].iter().enumerate() {
+        for (i, cand) in b.prefs[b.current()..].iter().enumerate() {
             if !self.info[cand].eliminated {
-                return Some(b.current + i);
+                return Some(b.current() + i);
             }
         }
         None
@@ -219,6 +219,7 @@ impl<'a> VoteMap<'a> {
             info.eliminated = true;
 
             let num_votes = info.votes.latest().clone();
+            info.votes.clear();
 
             // Create `PreferenceTransfer` events for each transfer value.
             let transfer_map = info.take_ballots();
@@ -229,7 +230,7 @@ impl<'a> VoteMap<'a> {
                 .flat_map(|(_, ballots)| ballots)
                 .collect();
 
-            let num_ballots: u32 = all_ballots.iter().map(|b| b.weight).sum();
+            let num_ballots: u32 = all_ballots.iter().map(|b| b.weight()).sum();
 
             // Aggregate transfer value that accounts for the ones we just threw out...
             let transfer_value = Frac::ratio(&(&num_votes - quota), &Int::from(num_ballots));
