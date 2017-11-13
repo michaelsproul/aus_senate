@@ -12,9 +12,9 @@ pub fn group_ballots_by_candidate<'a>(
 
     for ballot in ballots {
         if let Some(i) = vote_map.find_next_valid_preference(ballot) {
-            ballot.current = i;
+            ballot.set_current(i);
 
-            let continuing_candidate = ballot.prefs[ballot.current];
+            let continuing_candidate = ballot.prefs[ballot.current()];
 
             let bucket = map.entry(continuing_candidate).or_insert_with(Vec::new);
             bucket.push(ballot);
@@ -26,7 +26,7 @@ pub fn group_ballots_by_candidate<'a>(
 
 /// Compute the value of a list of ballots at a given weight (transfer value).
 pub fn ballot_value<'a>(weight: &Frac, ballots: &[&'a mut Ballot]) -> Int {
-    let num_ballots: u32 = ballots.iter().map(|b| b.weight).sum();
+    let num_ballots: u32 = ballots.iter().map(|b| b.weight()).sum();
     let value = weight * frac!(num_ballots);
     value.floor()
 }

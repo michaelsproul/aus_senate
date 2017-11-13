@@ -19,7 +19,7 @@ impl Stats {
     }
 
     pub fn record_valid_vote(&mut self, ballot: &Ballot) {
-        self.num_valid_votes += ballot.weight;
+        self.num_valid_votes += ballot.weight();
     }
 
     pub fn record_invalid_vote(&mut self, err: InvalidBallotErr) {

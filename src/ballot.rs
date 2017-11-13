@@ -6,8 +6,9 @@ pub struct Ballot {
     /// Ordering of candidates.
     pub prefs: Vec<CandidateId>,
     /// Index of the first candidate in `prefs` who is still in the running.
-    pub current: usize,
-    pub weight: u32,
+    current: usize,
+    #[cfg(feature = "support2013")]
+    weight: u32,
 }
 
 impl Ballot {
@@ -15,10 +16,12 @@ impl Ballot {
         Ballot {
             prefs: prefs,
             current: 0,
+            #[cfg(feature = "support2013")]
             weight: 1,
         }
     }
 
+    #[cfg(feature = "support2013")]
     pub fn multi(weight: u32, prefs: Vec<CandidateId>) -> Ballot {
         Ballot {
             prefs: prefs,
@@ -27,7 +30,23 @@ impl Ballot {
         }
     }
 
-    pub fn is_exhausted(&self) -> bool {
-        self.current == self.prefs.len() - 1
+    #[cfg(feature = "support2013")]
+    pub fn weight(&self) -> u32 {
+        self.weight
+    }
+
+    #[cfg(not(feature = "support2013"))]
+    pub fn weight(&self) -> u32 {
+        1
+    }
+
+    pub fn current(&self) -> usize {
+        self.current
+    }
+
+    pub fn set_current(&mut self, idx: usize) {
+        // NOTE: could use a smaller type to store `self.current` but it probably isn't worth
+        // it because the `Ballot` struct gets packed with padding bytes for alignment.
+        self.current = idx;
     }
 }

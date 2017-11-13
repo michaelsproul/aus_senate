@@ -20,3 +20,11 @@ debug = true
 
 [features]
 osx_mem_profile = []
+support2013 = []
+
+[[bin]]
+name = "election2016"
+
+[[bin]]
+name = "election2013"
+required-features = ["support2013"]
