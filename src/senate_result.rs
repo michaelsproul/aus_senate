@@ -3,15 +3,15 @@ use util::Int;
 use candidate::*;
 
 #[derive(Debug)]
-pub struct Senate<'a> {
+pub struct Senate {
     /// List of senators and the vote tally they were elected on.
-    pub senators: Vec<(&'a Candidate, Int)>,
+    pub senators: Vec<(Candidate, Int)>,
     pub tied: bool,
     pub stats: Stats,
 }
 
-impl<'a> Senate<'a> {
-    pub fn new() -> Senate<'a> {
+impl Senate {
+    pub fn new() -> Senate {
         Senate {
             senators: vec![],
             tied: false,
@@ -19,8 +19,8 @@ impl<'a> Senate<'a> {
         }
     }
 
-    pub fn add_senator(&mut self, id: CandidateId, tally: Int, candidates: &'a CandidateMap) {
-        self.senators.push((&candidates[&id], tally))
+    pub fn add_senator(&mut self, id: CandidateId, tally: Int, candidates: &CandidateMap) {
+        self.senators.push((candidates[&id].clone(), tally))
     }
 
     pub fn num_elected(&self) -> usize {

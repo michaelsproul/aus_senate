@@ -11,11 +11,11 @@ pub fn compute_quota(num_votes: u32, num_positions: usize) -> Int {
     frac!(num_votes, num_positions + 1).ceil()
 }
 
-fn elect_candidates<'a, 'b: 'a>(
+fn elect_candidates<'a>(
     elected: Vec<CandidateElected<'a>>,
-    result: &mut Senate<'b>,
+    result: &mut Senate,
     preference_transfers: &mut VecDeque<PreferenceTransfer<'a>>,
-    candidates: &'b CandidateMap,
+    candidates: &CandidateMap,
 ) {
     for c in elected {
         trace!("Elected {:?} with {:?} votes", candidates[&c.id], c.votes);
@@ -35,12 +35,12 @@ fn exclude_candidates<'a, 'b: 'a>(
     }
 }
 
-pub fn decide_election<'a, I>(
-    candidates: &'a CandidateMap,
+pub fn decide_election<I>(
+    candidates: &CandidateMap,
     disqualified_candidates: &[CandidateId],
     ballot_stream: I,
     num_positions: usize,
-) -> Result<Senate<'a>, Box<Error>>
+) -> Result<Senate, Box<Error>>
 where
     I: IntoIterator<Item = IOBallot>,
 {

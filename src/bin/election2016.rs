@@ -60,7 +60,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
     let election_result = decide_election(&candidates, &[], ballots_iter, num_candidates)?;
 
     println!("=== Elected ===");
-    for &(c, ref votes) in &election_result.senators {
+    for &(ref c, ref votes) in &election_result.senators {
         println!(
             "{} {} ({}) [{} votes]",
             c.other_names,
