@@ -16,7 +16,7 @@ pub struct Candidate {
 }
 
 /// User-input description of a candidate with first name and surname.
-#[derive(Clone)]
+#[derive(Serialize, Clone, Debug)]
 pub struct CandidateName {
     pub first: String,
     pub last: String,
