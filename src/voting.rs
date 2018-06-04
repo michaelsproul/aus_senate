@@ -99,22 +99,6 @@ where
     for i in 2.. {
         info!("Count #{}", i);
 
-        // Transfer pending preferences.
-        let transfer = preference_transfers.pop_front().expect(
-            "election should terminate before running out of preferences to transfer",
-        );
-
-        trace!(
-            "Transferring preferences for {:?} at value {:?}",
-            candidates[&transfer.0],
-            transfer.1
-        );
-        vote_map.transfer_preferences(i - 1, transfer);
-
-        // Elect any candidates with a full quota, and stage their preference transfers.
-        let elected = vote_map.elect_candidates_with_quota(&quota);
-        elect_candidates(elected, &mut result, &mut preference_transfers, candidates);
-
         if preference_transfers.is_empty() {
             // If the number of candidates remaining is equal to the number of positions, elect
             // them all.
@@ -131,9 +115,26 @@ where
             }
 
             // Exclude some candidates if we've run out of things to do.
+            // as per section 13 of COMMONWEALTH ELECTORAL ACT 1918 - SECT 273 
             let excluded = vote_map.exclude_candidates();
             exclude_candidates(excluded, &mut preference_transfers, candidates);
         }
+
+        // Transfer pending preferences.
+        let transfer = preference_transfers.pop_front().expect(
+            "election should terminate before running out of preferences to transfer",
+        );
+
+        trace!(
+            "Transferring preferences for {:?} at value {:?}",
+            candidates[&transfer.0],
+            transfer.1
+        );
+        vote_map.transfer_preferences(i - 1, transfer);
+
+        // Elect any candidates with a full quota, and stage their preference transfers.
+        let elected = vote_map.elect_candidates_with_quota(&quota);
+        elect_candidates(elected, &mut result, &mut preference_transfers, candidates);
 
         vote_map.print_summary();
     }
