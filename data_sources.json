@@ -1,4 +1,9 @@
 {
+    "candidate_ids.csv": {
+        "zipped": false,
+        "url": "https://results.aec.gov.au/20499/Website/Downloads/HouseCandidatesDownload-20499.csv",
+        "sha256": "e26f4237ba7cad658d413b11d028c372e56129e0d29b0090fc325055796409d3"
+    },
     "candidate_ordering.csv": {
         "zipped": true,
         "url": "http://results.aec.gov.au/20499/Website/External/aec-senate-candidateinformation-20499.zip",

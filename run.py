@@ -21,6 +21,7 @@ def run():
 
     data_dir = "data"
 
+    candidate_ids = os.path.join(data_dir, "candidate_ids.csv")
     candidate_ordering = os.path.join(data_dir, "candidate_ordering.csv")
 
     for (state, num_senators) in sorted(states.items()):
@@ -28,7 +29,7 @@ def run():
 
         state_csv = os.path.join(data_dir, "{}.csv".format(state))
 
-        args = [candidate_ordering, state_csv, state, str(num_senators)]
+        args = [candidate_ids, candidate_ordering, state_csv, state, str(num_senators)]
 
         sp.call(cargo + args)
 

@@ -60,7 +60,7 @@ def fetch(states):
             save_file(zip_file, res.content, zip_checksum)
             extract_zip(zip_file, dest_dir, csv_file, csv_checksum, info)
         else:
-            save_file(csv_file, res.content, checksum)
+            save_file(csv_file, res.content, csv_checksum)
 
 def save_file(filename, content, checksum):
     with open(filename, "wb") as output:

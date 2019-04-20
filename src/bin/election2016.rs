@@ -5,36 +5,39 @@ extern crate csv;
 extern crate log;
 extern crate env_logger;
 
-use std::error::Error;
 use std::env;
+use std::error::Error;
 use std::fs::File;
 
-use aus_senate::group::*;
-use aus_senate::candidate::*;
-use aus_senate::voting::*;
 use aus_senate::ballot_parse::*;
-use aus_senate::parse::candidates2016;
+use aus_senate::candidate::*;
+use aus_senate::group::*;
+use aus_senate::parse::{candidate_ids2016, candidates2016};
+use aus_senate::voting::*;
 
 fn main_with_result() -> Result<(), Box<Error>> {
     env_logger::init()?;
 
     let args: Vec<String> = env::args().collect();
 
-    if args.len() != 4 && args.len() != 5 {
-        println!("Usage: ./election2016 <candidates file> <prefs file> <state> [num candidates]");
+    if args.len() != 5 && args.len() != 6 {
+        println!("Usage: ./election2016 <candidate IDs file> <candidates file> <prefs file> <state> [num candidates]");
         Err("invalid command line arguments.".to_string())?;
     }
 
-    let candidates_file_name = &args[1];
-    let prefs_file_name = &args[2];
-    let state = &args[3];
-    let num_candidates = match args.get(4) {
+    let candidate_ids_file_name = &args[1];
+    let candidates_file_name = &args[2];
+    let prefs_file_name = &args[3];
+    let state = &args[4];
+    let num_candidates = match args.get(5) {
         Some(x) => x.parse::<usize>()?,
         None => 12,
     };
 
+    let candidate_ids_file = File::open(candidate_ids_file_name)?;
+    let candidate_id_lookup = candidate_ids2016::parse(candidate_ids_file)?;
     let candidates_file = File::open(candidates_file_name)?;
-    let all_candidates = candidates2016::parse(candidates_file)?;
+    let all_candidates = candidates2016::parse(candidates_file, &candidate_id_lookup)?;
 
     for c in &all_candidates {
         debug!("{}: {} {} ({})", c.id, c.other_names, c.surname, c.party);
@@ -63,10 +66,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
     for &(ref c, ref votes) in &election_result.senators {
         println!(
             "{} {} ({}) [{} votes]",
-            c.other_names,
-            c.surname,
-            c.party,
-            votes
+            c.other_names, c.surname, c.party, votes
         );
     }
 

@@ -1,4 +1,5 @@
 use super::prelude::*;
+use crate::parse::candidate_ids2016::{lookup_candidate_id, CandidateIdLookup};
 
 #[derive(Deserialize, Debug)]
 struct CandidateRow {
@@ -29,17 +30,21 @@ struct CandidateRow {
     contact_email: String,
 }
 
-pub fn parse<R: Read>(input: R) -> Result<Vec<Candidate>, Box<Error>> {
+pub fn parse<R: Read>(
+    input: R,
+    id_lookup: &CandidateIdLookup,
+) -> Result<Vec<Candidate>, Box<Error>> {
     let mut result = vec![];
     let mut reader = ::csv::Reader::from_reader(input);
 
-    for (id, raw_row) in reader.deserialize::<CandidateRow>().enumerate() {
+    for raw_row in reader.deserialize::<CandidateRow>() {
         let row = raw_row?;
         if row.nom_ty != "S" {
             continue;
         }
+
         result.push(Candidate {
-            id: id as CandidateId,
+            id: lookup_candidate_id(id_lookup, &row.surname)?,
             surname: row.surname,
             other_names: row.ballot_given_nm,
             group_name: row.ticket,
