@@ -4,14 +4,14 @@ extern crate csv;
 use std::env;
 use std::error::Error;
 
-use aus_senate::candidate::*;
 use aus_senate::ballot::*;
-use aus_senate::voting::*;
-use aus_senate::util::*;
 use aus_senate::ballot_parse::*;
-use aus_senate::parse::*;
+use aus_senate::candidate::*;
 use aus_senate::parse::gvt2013::GVT;
 use aus_senate::parse::gvt_usage2013::GVTUsage;
+use aus_senate::parse::*;
+use aus_senate::util::*;
+use aus_senate::voting::*;
 
 // FIXME: use iterators instead
 fn create_gvt_ballot_list(gvt: &GVT, gvt_usage: &GVTUsage, state: &str) -> Vec<IOBallot> {
@@ -60,9 +60,11 @@ fn main_with_result() -> Result<(), Box<Error>> {
     let mut ballots = create_gvt_ballot_list(&gvt, &gvt_usage, state);
 
     // Then extend it with the below the line votes.
-    ballots.extend(btl_votes.into_iter().map(|(_, pref_map)| {
-        Ok(Ballot::single(flatten_pref_map(pref_map)))
-    }));
+    ballots.extend(
+        btl_votes
+            .into_iter()
+            .map(|(_, pref_map)| Ok(Ballot::single(flatten_pref_map(pref_map)))),
+    );
 
     let result = decide_election(&candidates, &[], ballots, 6)?;
 

@@ -1,6 +1,6 @@
+use candidate::*;
 use stats::Stats;
 use util::Int;
-use candidate::*;
 
 #[derive(Debug)]
 pub struct Senate {

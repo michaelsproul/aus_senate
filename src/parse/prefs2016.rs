@@ -1,6 +1,6 @@
+use super::prelude::*;
 use csv;
 use group::Group;
-use super::prelude::*;
 
 #[derive(Deserialize, Debug)]
 pub struct PrefRow {
@@ -38,9 +38,9 @@ pub fn parse_single_ballot(
 #[macro_export]
 macro_rules! parse_preferences_file {
     ($reader:expr, $groups:expr, $candidates:expr, $constraints:expr) => {{
-        use $crate::parse::prefs2016::{PrefRow, parse_single_ballot};
+        use $crate::parse::prefs2016::{parse_single_ballot, PrefRow};
         $reader
             .deserialize::<PrefRow>()
             .map(|raw_row| parse_single_ballot(raw_row, $groups, $candidates, $constraints))
-    }}
+    }};
 }

@@ -1,11 +1,11 @@
+use arith::*;
 use ballot::*;
 use candidate::*;
 use util::*;
-use arith::*;
 use vote_log::*;
 
-use rand::{thread_rng, Rng};
 use itertools::Itertools;
+use rand::{thread_rng, Rng};
 use std::mem;
 
 /// Map from transfer values to ballots with that transfer value.
@@ -92,7 +92,8 @@ impl<'a> VoteMap<'a> {
 
     /// Get the IDs of all candidates whose vote exceeds the quota.
     pub fn get_candidates_with_quota(&self, quota: &Int) -> Vec<CandidateId> {
-        let mut candidates_with_quota = self.info
+        let mut candidates_with_quota = self
+            .info
             .iter()
             .filter(|&(_, info)| !info.eliminated)
             .map(|(id, info)| (id, info.votes.latest()))
@@ -170,12 +171,10 @@ impl<'a> VoteMap<'a> {
         self.info
             .into_iter()
             .filter(|&(_, ref info)| !info.eliminated)
-            .map(|(id, info)| {
-                CandidateElected {
-                    id: id,
-                    votes: info.votes.latest().clone(),
-                    transfers: vec![],
-                }
+            .map(|(id, info)| CandidateElected {
+                id: id,
+                votes: info.votes.latest().clone(),
+                transfers: vec![],
             })
             .collect()
     }
@@ -201,7 +200,8 @@ impl<'a> VoteMap<'a> {
                 );
             }
 
-            let bucket = info.ballots
+            let bucket = info
+                .ballots
                 .entry(transfer_val.clone())
                 .or_insert_with(Vec::new);
             bucket.extend(ballots);
@@ -256,9 +256,7 @@ impl<'a> VoteMap<'a> {
 
         let mut pref_transfers: Vec<_> = transfer_map
             .into_iter()
-            .map(|(transfer_val, ballots)| {
-                PreferenceTransfer(candidate, transfer_val, ballots)
-            })
+            .map(|(transfer_val, ballots)| PreferenceTransfer(candidate, transfer_val, ballots))
             .collect();
 
         // Reverse the preference transfer events so they're ordered from largest to

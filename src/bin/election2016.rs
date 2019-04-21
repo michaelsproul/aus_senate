@@ -5,15 +5,15 @@ extern crate csv;
 extern crate log;
 extern crate env_logger;
 
-use std::error::Error;
 use std::env;
+use std::error::Error;
 use std::fs::File;
 
-use aus_senate::group::*;
-use aus_senate::candidate::*;
-use aus_senate::voting::*;
 use aus_senate::ballot_parse::*;
+use aus_senate::candidate::*;
+use aus_senate::group::*;
 use aus_senate::parse::candidates2016;
+use aus_senate::voting::*;
 
 fn main_with_result() -> Result<(), Box<Error>> {
     env_logger::init()?;
@@ -63,10 +63,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
     for &(ref c, ref votes) in &election_result.senators {
         println!(
             "{} {} ({}) [{} votes]",
-            c.other_names,
-            c.surname,
-            c.party,
-            votes
+            c.other_names, c.surname, c.party, votes
         );
     }
 

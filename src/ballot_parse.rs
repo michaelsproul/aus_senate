@@ -1,6 +1,6 @@
-use std::collections::BTreeMap;
-use std::cmp::{Ordering, min};
 use std::cmp::Ordering::*;
+use std::cmp::{min, Ordering};
+use std::collections::BTreeMap;
 
 use ballot::*;
 use candidate::*;
@@ -8,9 +8,9 @@ use group::Group;
 use std::error::Error;
 
 pub use self::BallotParseErr::*;
-pub use self::InvalidBallotErr::*;
 pub use self::ChoiceConstraint::*;
 pub use self::CountConstraint::*;
+pub use self::InvalidBallotErr::*;
 
 #[derive(Debug)]
 pub enum BallotParseErr {
@@ -125,7 +125,8 @@ fn remove_repeats_and_gaps<T>(
     (mut map, cutoff): BallotRes<T>,
 ) -> Result<BTreeMap<u32, T>, BallotParseErr> {
     // Search for a gap in the order of preferences.
-    let missing_pref = map.keys()
+    let missing_pref = map
+        .keys()
         .zip(1..)
         .find(|&(&pref, idx)| pref != idx)
         .map(|(_, idx)| idx);
@@ -167,10 +168,10 @@ pub fn parse_ballot_str(
         .map(flatten_pref_map);
 
     match (constraints.choice, above_the_line, below_the_line) {
-        (_, Ok(prefs), Err(_)) |
-        (_, Err(_), Ok(prefs)) |
-        (PreferAbove, Ok(prefs), Ok(_)) |
-        (PreferBelow, Ok(_), Ok(prefs)) => Ok(Ballot::single(prefs)),
+        (_, Ok(prefs), Err(_))
+        | (_, Err(_), Ok(prefs))
+        | (PreferAbove, Ok(prefs), Ok(_))
+        | (PreferBelow, Ok(_), Ok(prefs)) => Ok(Ballot::single(prefs)),
         (Strict, Ok(_), Ok(_)) => Err(InvalidBallot(InvalidStrict)),
         (_, Err(e1), Err(_)) => Err(e1),
     }
@@ -205,7 +206,7 @@ fn create_group_pref_map<'a, 'g, P>(
     groups: &'g [Group],
 ) -> Result<BallotRes<&'g [CandidateId]>, BallotParseErr>
 where
-    P: Iterator<Item=&'a str>,
+    P: Iterator<Item = &'a str>,
 {
     let group_candidates = |idx| {
         let group: &'g Group = &groups[idx];
@@ -219,7 +220,7 @@ fn create_pref_map<'a, P>(
     candidates: &[CandidateId],
 ) -> Result<BallotRes<CandidateId>, BallotParseErr>
 where
-    P: Iterator<Item=&'a str>,
+    P: Iterator<Item = &'a str>,
 {
     create_map(prefs, |idx| candidates[idx])
 }
@@ -227,21 +228,18 @@ where
 fn create_map<'a, F, T, P>(prefs: P, func: F) -> Result<BallotRes<T>, BallotParseErr>
 where
     F: Fn(usize) -> T,
-    P: Iterator<Item=&'a str>,
+    P: Iterator<Item = &'a str>,
 {
     let mut map = BTreeMap::new();
     let mut pref_cutoff = None;
 
     for (index, raw_pref) in prefs.enumerate() {
-
         let pref = match raw_pref {
             "" => continue,
             "*" | "/" => 1,
-            _ => {
-                raw_pref
-                    .parse::<u32>()
-                    .map_err(|_| InvalidBallot(InvalidCharacter))?
-            }
+            _ => raw_pref
+                .parse::<u32>()
+                .map_err(|_| InvalidBallot(InvalidCharacter))?,
         };
 
         let value = func(index);

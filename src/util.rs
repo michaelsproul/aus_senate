@@ -1,9 +1,9 @@
-use std::io::{self, BufRead, BufReader};
 use std::fs::File;
+use std::io::{self, BufRead, BufReader};
 
-pub use std::collections::{HashMap, BTreeMap};
-pub use gmp::mpz::Mpz;
 pub use gmp::mpq::Mpq;
+pub use gmp::mpz::Mpz;
+pub use std::collections::{BTreeMap, HashMap};
 
 pub type Int = Mpz;
 pub type Frac = Mpq;

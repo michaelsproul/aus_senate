@@ -1,11 +1,11 @@
-use std::error::Error;
 use std::collections::VecDeque;
+use std::error::Error;
 
-use util::*;
-use candidate::*;
-use vote_map::*;
 use ballot_parse::*;
+use candidate::*;
 use senate_result::*;
+use util::*;
+use vote_map::*;
 
 pub fn compute_quota(num_votes: u32, num_positions: usize) -> Int {
     frac!(num_votes, num_positions + 1).ceil()
@@ -115,15 +115,15 @@ where
             }
 
             // Exclude some candidates if we've run out of things to do.
-            // as per section 13 of COMMONWEALTH ELECTORAL ACT 1918 - SECT 273 
+            // as per section 13 of COMMONWEALTH ELECTORAL ACT 1918 - SECT 273
             let excluded = vote_map.exclude_candidates();
             exclude_candidates(excluded, &mut preference_transfers, candidates);
         }
 
         // Transfer pending preferences.
-        let transfer = preference_transfers.pop_front().expect(
-            "election should terminate before running out of preferences to transfer",
-        );
+        let transfer = preference_transfers
+            .pop_front()
+            .expect("election should terminate before running out of preferences to transfer");
 
         trace!(
             "Transferring preferences for {:?} at value {:?}",

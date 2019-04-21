@@ -1,5 +1,5 @@
+use std::fmt::{Debug, Error, Formatter};
 use util::*;
-use std::fmt::{Debug, Formatter, Error};
 
 /// Integer representing a candidate.
 pub type CandidateId = u16;
@@ -51,14 +51,21 @@ pub fn get_candidate_id_list(all_candidates: &[Candidate], state: &str) -> Vec<C
 /// Convert a list of candidate names into a list of candidate IDs.
 pub fn find_candidates_with_names(
     candidate_names: &[CandidateName],
-    candidates: &CandidateMap
+    candidates: &CandidateMap,
 ) -> Vec<CandidateId> {
-    candidate_names.iter()
+    candidate_names
+        .iter()
         .flat_map(|name| {
-            candidates.iter().find(|&(_, cand)| {
-                cand.surname.to_lowercase() == name.last.to_lowercase() &&
-                cand.other_names.to_lowercase().contains(&name.first.to_lowercase())
-            }).map(|(&id, _)| id)
+            candidates
+                .iter()
+                .find(|&(_, cand)| {
+                    cand.surname.to_lowercase() == name.last.to_lowercase()
+                        && cand
+                            .other_names
+                            .to_lowercase()
+                            .contains(&name.first.to_lowercase())
+                })
+                .map(|(&id, _)| id)
         })
         .collect()
 }

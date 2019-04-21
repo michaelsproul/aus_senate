@@ -1,5 +1,5 @@
-use ballot_parse::*;
 use ballot::*;
+use ballot_parse::*;
 use util::*;
 
 pub type BallotErrorMap = HashMap<InvalidBallotErr, u32>;
