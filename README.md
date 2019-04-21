@@ -1,6 +1,8 @@
 Australian Senate Voting Algorithms
 ====
 
+[![Build Status](https://travis-ci.org/michaelsproul/aus_senate.svg?branch=master)](https://travis-ci.org/michaelsproul/aus_senate)
+
 This is an implementation of the Australian Senate Voting algorithm as described by the AEC.
 The AEC won't show us their code, but we can still verify their results using an independent
 implementation!
