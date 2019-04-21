@@ -54,7 +54,7 @@ impl<'a> VoteInfo<'a> {
 
 fn new_transfer_map<'a>() -> TransferMap<'a> {
     let mut map = TransferMap::new();
-    map.insert(frac!(1), vec![]);
+    map.insert(frac!(1u64), vec![]);
     map
 }
 
@@ -62,8 +62,8 @@ impl<'a> VoteMap<'a> {
     pub fn new(candidates: &'a CandidateMap) -> Result<VoteMap<'a>, String> {
         let mut v = VoteMap {
             info: HashMap::new(),
-            candidates: candidates,
-            one: frac!(1),
+            candidates,
+            one: frac!(1u64),
         };
         for &id in candidates.keys() {
             let prev = v.info.insert(id, VoteInfo::new());
@@ -172,7 +172,7 @@ impl<'a> VoteMap<'a> {
             .into_iter()
             .filter(|&(_, ref info)| !info.eliminated)
             .map(|(id, info)| CandidateElected {
-                id: id,
+                id,
                 votes: info.votes.latest().clone(),
                 transfers: vec![],
             })

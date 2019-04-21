@@ -8,7 +8,7 @@ use util::*;
 use vote_map::*;
 
 pub fn compute_quota(num_votes: u32, num_positions: usize) -> Int {
-    frac!(num_votes, num_positions + 1).ceil()
+    frac!(num_votes, num_positions as u64 + 1).ceil()
 }
 
 fn elect_candidates<'a>(

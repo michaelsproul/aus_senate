@@ -43,7 +43,7 @@ pub fn get_state_candidates(all_candidates: &[Candidate], state: &str) -> Candid
 pub fn get_candidate_id_list(all_candidates: &[Candidate], state: &str) -> Vec<CandidateId> {
     all_candidates
         .iter()
-        .filter(|c| &c.state == state)
+        .filter(|c| c.state == state)
         .map(|c| c.id)
         .collect()
 }

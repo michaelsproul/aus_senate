@@ -4,7 +4,7 @@ use util::*;
 
 pub type BallotErrorMap = HashMap<InvalidBallotErr, u32>;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Stats {
     num_valid_votes: u32,
     invalid_votes: BallotErrorMap,
@@ -12,10 +12,7 @@ pub struct Stats {
 
 impl Stats {
     pub fn new() -> Stats {
-        Stats {
-            num_valid_votes: 0,
-            invalid_votes: HashMap::new(),
-        }
+        Self::default()
     }
 
     pub fn record_valid_vote(&mut self, ballot: &Ballot) {

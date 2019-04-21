@@ -14,7 +14,7 @@ pub struct Ballot {
 impl Ballot {
     pub fn single(prefs: Vec<CandidateId>) -> Ballot {
         Ballot {
-            prefs: prefs,
+            prefs,
             current: 0,
             #[cfg(feature = "support2013")]
             weight: 1,
@@ -24,9 +24,9 @@ impl Ballot {
     #[cfg(feature = "support2013")]
     pub fn multi(weight: u32, prefs: Vec<CandidateId>) -> Ballot {
         Ballot {
-            prefs: prefs,
+            prefs,
             current: 0,
-            weight: weight,
+            weight,
         }
     }
 

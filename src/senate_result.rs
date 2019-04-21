@@ -2,7 +2,7 @@ use candidate::*;
 use stats::Stats;
 use util::Int;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Senate {
     /// List of senators and the vote tally they were elected on.
     pub senators: Vec<(Candidate, Int)>,

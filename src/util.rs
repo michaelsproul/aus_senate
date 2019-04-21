@@ -11,10 +11,10 @@ pub type Frac = Mpq;
 #[macro_export]
 macro_rules! frac {
     ($e:expr) => {
-        frac!($e, 1)
+        frac!($e, 1u64)
     };
     ($e1:expr, $e2:expr) => {
-        Mpq::ratio(&Mpz::from($e1 as u64), &Mpz::from($e2 as u64))
+        Mpq::ratio(&Mpz::from(u64::from($e1)), &Mpz::from(u64::from($e2)))
     };
 }
 

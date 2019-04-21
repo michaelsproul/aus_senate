@@ -53,7 +53,7 @@ fn main_with_result() -> Result<(), Box<Error>> {
     let prefs_file = File::open(prefs_file_name)?;
 
     let mut csv_reader = csv::ReaderBuilder::new()
-        .comment(Some('-' as u8))
+        .comment(Some(b'-'))
         .from_reader(prefs_file);
     let ballots_iter = parse_preferences_file!(csv_reader, &groups, &candidate_ids, &constraints);
 
