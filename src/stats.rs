@@ -8,6 +8,9 @@ pub type BallotErrorMap = HashMap<InvalidBallotErr, u32>;
 pub struct Stats {
     num_valid_votes: u32,
     invalid_votes: BallotErrorMap,
+    /// Map from vote round to number of ballots exhausted during that round (not cumulative) and
+    /// their combined value (sum of transfer value).
+    pub exhausted_votes: BTreeMap<usize, (usize, Frac)>,
 }
 
 impl Stats {
@@ -22,6 +25,15 @@ impl Stats {
     pub fn record_invalid_vote(&mut self, err: InvalidBallotErr) {
         let err_count = self.invalid_votes.entry(err.erase_detail()).or_insert(0);
         *err_count += 1;
+    }
+
+    pub fn record_exhausted_vote(&mut self, round: usize, transfer_value: &Frac) {
+        let &mut (ref mut count, ref mut value) = self
+            .exhausted_votes
+            .entry(round)
+            .or_insert_with(|| (0, frac!(0u64)));
+        *count += 1;
+        *value += transfer_value;
     }
 
     pub fn num_total_votes(&self) -> u32 {

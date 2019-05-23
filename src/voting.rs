@@ -83,7 +83,7 @@ where
         let CandidateExcluded { id, transfers } = vote_map.exclude_candidate_by_id(disqual_id);
         info!("Disqualified: {:?}", candidates[&id]);
         for transfer in transfers {
-            vote_map.transfer_preferences(0, transfer);
+            vote_map.transfer_preferences(0, transfer, &mut result.stats);
         }
     }
 
@@ -130,7 +130,7 @@ where
             candidates[&transfer.0],
             transfer.1
         );
-        vote_map.transfer_preferences(i - 1, transfer);
+        vote_map.transfer_preferences(i - 1, transfer, &mut result.stats);
 
         // Elect any candidates with a full quota, and stage their preference transfers.
         let elected = vote_map.elect_candidates_with_quota(&quota);

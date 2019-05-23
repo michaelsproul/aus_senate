@@ -1,5 +1,6 @@
 use ballot::Ballot;
 use candidate::*;
+use stats::Stats;
 use util::*;
 use vote_map::*;
 
@@ -7,6 +8,9 @@ use vote_map::*;
 pub fn group_ballots_by_candidate<'a>(
     vote_map: &VoteMap<'a>,
     ballots: Vec<&'a mut Ballot>,
+    vote_round: usize,
+    transfer_val: &Frac,
+    stats: &mut Stats,
 ) -> HashMap<CandidateId, Vec<&'a mut Ballot>> {
     let mut map = HashMap::new();
 
@@ -18,6 +22,8 @@ pub fn group_ballots_by_candidate<'a>(
 
             let bucket = map.entry(continuing_candidate).or_insert_with(Vec::new);
             bucket.push(ballot);
+        } else {
+            stats.record_exhausted_vote(vote_round, transfer_val);
         }
     }
 

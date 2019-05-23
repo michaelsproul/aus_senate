@@ -1,6 +1,7 @@
 use arith::*;
 use ballot::*;
 use candidate::*;
+use stats::Stats;
 use util::*;
 use vote_log::*;
 
@@ -179,10 +180,16 @@ impl<'a> VoteMap<'a> {
             .collect()
     }
 
-    pub fn transfer_preferences(&mut self, idx: usize, transfer: PreferenceTransfer<'a>) {
+    pub fn transfer_preferences(
+        &mut self,
+        idx: usize,
+        transfer: PreferenceTransfer<'a>,
+        stats: &mut Stats,
+    ) {
         let PreferenceTransfer(_, transfer_val, all_ballots) = transfer;
 
-        let grouped_ballots = group_ballots_by_candidate(&*self, all_ballots);
+        let grouped_ballots =
+            group_ballots_by_candidate(self, all_ballots, idx, &transfer_val, stats);
 
         for (continuing_id, ballots) in grouped_ballots {
             let mut info = self.info.get_mut(&continuing_id).unwrap();

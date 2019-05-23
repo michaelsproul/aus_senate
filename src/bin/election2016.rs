@@ -71,6 +71,19 @@ fn main_with_result() -> Result<(), Box<Error>> {
         println!("Tie for the last place");
     }
 
+    // Summary of exhausted votes
+    /*
+    for (round, &(vote_count, ref vote_value)) in election_result.stats.exhausted_votes.iter() {
+        println!(
+            "{},{},{},{}",
+            round,
+            vote_count,
+            vote_value.get_num(),
+            vote_value.get_den()
+        );
+    }
+    */
+
     Ok(())
 }
 
