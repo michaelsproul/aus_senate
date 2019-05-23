@@ -18,12 +18,14 @@ extern crate rand;
 
 #[macro_use]
 pub mod util;
+#[macro_use]
+pub mod parse;
 mod arith;
 pub mod ballot;
 pub mod ballot_parse;
 pub mod candidate;
+pub mod election2016;
 pub mod group;
-pub mod parse;
 pub mod senate_result;
 pub mod stats;
 mod vote_log;

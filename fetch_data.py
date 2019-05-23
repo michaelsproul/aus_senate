@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 import json
 import hashlib
 import zipfile
@@ -85,4 +86,11 @@ def checksum_ok(filename: str, checksum: str) -> bool:
     return checksum is None or sha256_file(filename) == checksum
 
 if __name__ == "__main__":
-    fetch()
+    with open("states.json", "r") as f:
+        states = json.load(f)
+
+    # If states are specified on the command-line, just run elections for those states.
+    if len(sys.argv) > 1:
+        states = {s: n for (s, n) in states.items() if s in sys.argv[1:]}
+
+    fetch(states)

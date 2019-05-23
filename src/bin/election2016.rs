@@ -1,19 +1,10 @@
 #[macro_use]
-extern crate aus_senate;
-extern crate csv;
-#[macro_use]
 extern crate log;
-extern crate env_logger;
+extern crate aus_senate;
 
+use aus_senate::election2016;
 use std::env;
 use std::error::Error;
-use std::fs::File;
-
-use aus_senate::ballot_parse::*;
-use aus_senate::candidate::*;
-use aus_senate::group::*;
-use aus_senate::parse::candidates2016;
-use aus_senate::voting::*;
 
 fn main_with_result() -> Result<(), Box<Error>> {
     env_logger::init()?;
@@ -33,31 +24,8 @@ fn main_with_result() -> Result<(), Box<Error>> {
         None => 12,
     };
 
-    let candidates_file = File::open(candidates_file_name)?;
-    let all_candidates = candidates2016::parse(candidates_file)?;
-
-    for c in &all_candidates {
-        debug!("{}: {} {} ({})", c.id, c.other_names, c.surname, c.party);
-    }
-
-    // Extract candidate and group information from the complete list of ballots.
-    let candidates = get_state_candidates(&all_candidates, state);
-    let candidate_ids = get_candidate_id_list(&all_candidates, state);
-    let groups = get_group_list(&all_candidates, state);
-
-    let constraints = Constraints::official();
-
-    debug!("Num groups: {}", groups.len());
-    trace!("Groups: {:#?}", groups);
-
-    let prefs_file = File::open(prefs_file_name)?;
-
-    let mut csv_reader = csv::ReaderBuilder::new()
-        .comment(Some(b'-'))
-        .from_reader(prefs_file);
-    let ballots_iter = parse_preferences_file!(csv_reader, &groups, &candidate_ids, &constraints);
-
-    let election_result = decide_election(&candidates, &[], ballots_iter, num_candidates)?;
+    let election_result =
+        election2016::run(candidates_file_name, prefs_file_name, state, num_candidates)?;
 
     println!("=== Elected ===");
     for &(ref c, ref votes) in &election_result.senators {
@@ -71,7 +39,6 @@ fn main_with_result() -> Result<(), Box<Error>> {
         println!("Tie for the last place");
     }
 
-    // Summary of exhausted votes
     /*
     for (round, &(vote_count, ref vote_value)) in election_result.stats.exhausted_votes.iter() {
         println!(
