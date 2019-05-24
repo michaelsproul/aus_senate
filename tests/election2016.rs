@@ -35,7 +35,10 @@ fn nsw_2016_election() {
     assert_eq!(result.senators.len(), num_senators);
 
     for ((senator, obs_count), (name, exp_count)) in result.senators.iter().zip(expected.iter()) {
-        assert_eq!(name, &format!("{:?}", senator));
+        assert_eq!(
+            name,
+            &format!("{} {}", senator.other_names, senator.surname)
+        );
         assert_eq!(obs_count, &Int::from(*exp_count));
     }
 }
