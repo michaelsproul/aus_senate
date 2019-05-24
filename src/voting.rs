@@ -18,7 +18,10 @@ fn elect_candidates<'a>(
     candidates: &CandidateMap,
 ) {
     for c in elected {
-        trace!("Elected {:?} with {:?} votes", candidates[&c.id], c.votes);
+        CANDIDATE_ORDER.write(format!(
+            "Elected {:?} with {:?} votes",
+            candidates[&c.id], c.votes
+        ));
         result.add_senator(c.id, c.votes, candidates);
         preference_transfers.extend(c.transfers);
     }
@@ -30,7 +33,7 @@ fn exclude_candidates<'a, 'b: 'a>(
     candidates: &'b CandidateMap,
 ) {
     for CandidateExcluded { id, transfers } in excluded {
-        info!("Excluded {:?}", candidates[&id]);
+        CANDIDATE_ORDER.write(format!("Excluded {:?}", candidates[&id]));
         preference_transfers.extend(transfers);
     }
 }
@@ -78,10 +81,9 @@ where
     let mut preference_transfers = VecDeque::new();
 
     // Exclude all the disqualified candidates.
-    info!("Excluding disqualified candidates");
     for &disqual_id in disqualified_candidates {
         let CandidateExcluded { id, transfers } = vote_map.exclude_candidate_by_id(disqual_id);
-        info!("Disqualified: {:?}", candidates[&id]);
+        CANDIDATE_ORDER.write(format!("Disqualified {:?}", candidates[&id]));
         for transfer in transfers {
             vote_map.transfer_preferences(0, transfer, &mut result.stats);
         }

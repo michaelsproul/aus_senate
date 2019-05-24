@@ -15,6 +15,8 @@ extern crate serde_derive;
 extern crate unwrap;
 extern crate itertools;
 extern crate rand;
+#[macro_use]
+extern crate lazy_static;
 
 #[macro_use]
 pub mod util;
@@ -25,6 +27,8 @@ pub mod ballot;
 pub mod ballot_parse;
 pub mod candidate;
 pub mod election2016;
+pub mod exhausted_votes;
+pub mod file_logger;
 pub mod group;
 pub mod senate_result;
 pub mod stats;

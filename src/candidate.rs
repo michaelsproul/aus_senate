@@ -24,7 +24,11 @@ pub struct CandidateName {
 
 impl Debug for Candidate {
     fn fmt(&self, fmt: &mut Formatter) -> Result<(), Error> {
-        write!(fmt, "{} {}", self.other_names, self.surname)
+        write!(
+            fmt,
+            "{} {} ({})",
+            self.other_names, self.surname, self.party
+        )
     }
 }
 

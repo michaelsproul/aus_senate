@@ -1,5 +1,6 @@
 use ballot::*;
 use ballot_parse::*;
+use exhausted_votes::*;
 use util::*;
 
 pub type BallotErrorMap = HashMap<InvalidBallotErr, u32>;
@@ -10,7 +11,7 @@ pub struct Stats {
     invalid_votes: BallotErrorMap,
     /// Map from vote round to number of ballots exhausted during that round (not cumulative) and
     /// their combined value (sum of transfer value).
-    pub exhausted_votes: BTreeMap<usize, (usize, Frac)>,
+    pub exhausted_votes: ExhaustedVotes,
 }
 
 impl Stats {

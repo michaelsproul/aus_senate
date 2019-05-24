@@ -2,7 +2,7 @@
 extern crate log;
 extern crate aus_senate;
 
-use aus_senate::election2016;
+use aus_senate::{election2016, exhausted_votes};
 use std::env;
 use std::error::Error;
 
@@ -39,17 +39,10 @@ fn main_with_result() -> Result<(), Box<Error>> {
         println!("Tie for the last place");
     }
 
-    /*
-    for (round, &(vote_count, ref vote_value)) in election_result.stats.exhausted_votes.iter() {
-        println!(
-            "{},{},{},{}",
-            round,
-            vote_count,
-            vote_value.get_num(),
-            vote_value.get_den()
-        );
-    }
-    */
+    exhausted_votes::write_out(
+        &election_result.stats.exhausted_votes,
+        "results/exhausted.csv",
+    )?;
 
     Ok(())
 }

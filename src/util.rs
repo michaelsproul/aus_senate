@@ -1,4 +1,5 @@
-use std::fs::File;
+use file_logger::FileLogger;
+use std::fs::{DirBuilder, File};
 use std::io::{self, BufRead, BufReader};
 
 pub use gmp::mpq::Mpq;
@@ -7,6 +8,19 @@ pub use std::collections::{BTreeMap, HashMap};
 
 pub type Int = Mpz;
 pub type Frac = Mpq;
+
+// Globally accessible log outputs.
+// TODO: configurable results path
+lazy_static! {
+    pub static ref RESULTS_DIR: () = DirBuilder::new()
+        .recursive(true)
+        .create("results")
+        .expect("failed to create results directory");
+    pub static ref CANDIDATE_ORDER: FileLogger = {
+        *RESULTS_DIR;
+        FileLogger::new("results/candidates.txt").expect("results/candidates.txt")
+    };
+}
 
 #[macro_export]
 macro_rules! frac {
