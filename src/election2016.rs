@@ -4,6 +4,7 @@ use std::fs::File;
 use ballot_parse::*;
 use candidate::*;
 use group::*;
+use munge::BallotMunge;
 use parse::candidates2016;
 use senate_result::Senate;
 use voting::*;
@@ -14,6 +15,8 @@ pub fn run(
     prefs_file_name: &str,
     state: &str,
     num_candidates: usize,
+    disqualified_candidates: &[CandidateName],
+    mungers: &mut [Box<BallotMunge>],
 ) -> Result<Senate, Box<Error>> {
     let candidates_file = File::open(candidates_file_name)?;
     let all_candidates = candidates2016::parse(candidates_file)?;
@@ -29,8 +32,17 @@ pub fn run(
 
     let constraints = Constraints::official();
 
-    debug!("Num groups: {}", groups.len());
-    trace!("Groups: {:#?}", groups);
+    for group in &groups {
+        for id in group.candidate_ids.first() {
+            println!("group {}: {}", group.name, candidates[id].party);
+        }
+    }
+
+    let disqualified_candidate_ids =
+        find_candidates_with_names(&disqualified_candidates, &candidates);
+    if disqualified_candidate_ids.len() != disqualified_candidates.len() {
+        return Err("Unable to locate all candidates to disqualify".into());
+    }
 
     let prefs_file = File::open(prefs_file_name)?;
 
@@ -39,5 +51,12 @@ pub fn run(
         .from_reader(prefs_file);
     let ballots_iter = parse_preferences_file!(csv_reader, &groups, &candidate_ids, &constraints);
 
-    decide_election(&candidates, &[], ballots_iter, num_candidates)
+    decide_election(
+        &candidates,
+        &groups,
+        &disqualified_candidate_ids,
+        ballots_iter,
+        num_candidates,
+        mungers,
+    )
 }

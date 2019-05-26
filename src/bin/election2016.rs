@@ -2,6 +2,7 @@
 extern crate log;
 extern crate aus_senate;
 
+use aus_senate::munge::{BallotMunge, RedVsBlue};
 use aus_senate::{election2016, exhausted_votes};
 use std::env;
 use std::error::Error;
@@ -24,8 +25,19 @@ fn main_with_result() -> Result<(), Box<Error>> {
         None => 12,
     };
 
-    let election_result =
-        election2016::run(candidates_file_name, prefs_file_name, state, num_candidates)?;
+    //let mut mungers = vec![Box::new(RedVsBlue::new(state)) as Box<BallotMunge>];
+    let mut mungers = vec![];
+
+    let election_result = election2016::run(
+        candidates_file_name,
+        prefs_file_name,
+        state,
+        num_candidates,
+        &[],
+        &mut mungers[..],
+    )?;
+
+    println!("Yikes: {:#?}", mungers);
 
     println!("=== Elected ===");
     for &(ref c, ref votes) in &election_result.senators {

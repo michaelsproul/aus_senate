@@ -30,6 +30,7 @@ pub mod election2016;
 pub mod exhausted_votes;
 pub mod file_logger;
 pub mod group;
+pub mod munge;
 pub mod senate_result;
 pub mod stats;
 mod vote_log;

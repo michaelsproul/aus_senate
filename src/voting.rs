@@ -3,6 +3,8 @@ use std::error::Error;
 
 use ballot_parse::*;
 use candidate::*;
+use group::Group;
+use munge::BallotMunge;
 use senate_result::*;
 use util::*;
 use vote_map::*;
@@ -12,6 +14,7 @@ pub fn compute_quota(num_votes: u32, num_positions: usize) -> Int {
 }
 
 fn elect_candidates<'a>(
+    vote_round: usize,
     elected: Vec<CandidateElected<'a>>,
     result: &mut Senate,
     preference_transfers: &mut VecDeque<PreferenceTransfer<'a>>,
@@ -19,8 +22,8 @@ fn elect_candidates<'a>(
 ) {
     for c in elected {
         CANDIDATE_ORDER.write(format!(
-            "Elected {:?} with {:?} votes",
-            candidates[&c.id], c.votes
+            "Elected {:?} with {:?} votes (round {})",
+            candidates[&c.id], c.votes, vote_round
         ));
         result.add_senator(c.id, c.votes, candidates);
         preference_transfers.extend(c.transfers);
@@ -40,9 +43,11 @@ fn exclude_candidates<'a, 'b: 'a>(
 
 pub fn decide_election<I>(
     candidates: &CandidateMap,
+    groups: &[Group],
     disqualified_candidates: &[CandidateId],
     ballot_stream: I,
     num_positions: usize,
+    mungers: &mut [Box<BallotMunge>],
 ) -> Result<Senate, Box<Error>>
 where
     I: IntoIterator<Item = IOBallot>,
@@ -54,8 +59,11 @@ where
 
     for maybe_ballot in ballot_stream {
         match maybe_ballot {
-            Ok(ballot) => {
+            Ok(mut ballot) => {
                 result.stats.record_valid_vote(&ballot);
+                for m in mungers.iter_mut() {
+                    m.munge(&mut ballot, groups, candidates);
+                }
                 ballots.push(ballot);
             }
             Err(InvalidBallot(err)) => {
@@ -92,6 +100,7 @@ where
     info!("Count #1");
     let elected_on_first_prefs = vote_map.elect_candidates_with_quota(&quota);
     elect_candidates(
+        1,
         elected_on_first_prefs,
         &mut result,
         &mut preference_transfers,
@@ -108,6 +117,7 @@ where
             if vote_map.num_candidates_remaining() == positions_remaining {
                 let remaining = vote_map.elect_remaining();
                 elect_candidates(
+                    i - 1,
                     remaining,
                     &mut result,
                     &mut preference_transfers,
@@ -136,7 +146,13 @@ where
 
         // Elect any candidates with a full quota, and stage their preference transfers.
         let elected = vote_map.elect_candidates_with_quota(&quota);
-        elect_candidates(elected, &mut result, &mut preference_transfers, candidates);
+        elect_candidates(
+            i,
+            elected,
+            &mut result,
+            &mut preference_transfers,
+            candidates,
+        );
 
         vote_map.print_summary();
     }
