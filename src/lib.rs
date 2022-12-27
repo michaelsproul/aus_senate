@@ -6,6 +6,8 @@ extern crate alloc_system;
 #[macro_use]
 extern crate log;
 extern crate csv;
+#[macro_use]
+extern crate structopt;
 extern crate env_logger;
 extern crate gmp;
 extern crate serde;
@@ -26,6 +28,7 @@ mod arith;
 pub mod ballot;
 pub mod ballot_parse;
 pub mod candidate;
+pub mod cli;
 pub mod election2016;
 pub mod exhausted_votes;
 pub mod file_logger;

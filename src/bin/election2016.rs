@@ -2,6 +2,7 @@
 extern crate log;
 extern crate aus_senate;
 
+use aus_senate::cli;
 use aus_senate::munge::{BallotMunge, RedVsBlue};
 use aus_senate::{election2016, exhausted_votes};
 use std::env;
@@ -10,34 +11,18 @@ use std::error::Error;
 fn main_with_result() -> Result<(), Box<Error>> {
     env_logger::init()?;
 
-    let args: Vec<String> = env::args().collect();
-
-    if args.len() != 4 && args.len() != 5 {
-        println!("Usage: ./election2016 <candidates file> <prefs file> <state> [num candidates]");
-        Err("invalid command line arguments.".to_string())?;
-    }
-
-    let candidates_file_name = &args[1];
-    let prefs_file_name = &args[2];
-    let state = &args[3];
-    let num_candidates = match args.get(4) {
-        Some(x) => x.parse::<usize>()?,
-        None => 12,
-    };
-
-    //let mut mungers = vec![Box::new(RedVsBlue::new(state)) as Box<BallotMunge>];
-    let mut mungers = vec![];
+    let mut args = cli::Options::from_args();
+    let num_candidates = args.num_candidates.unwrap_or(12);
+    let mut mungers = args.mungers.take();
 
     let election_result = election2016::run(
-        candidates_file_name,
-        prefs_file_name,
-        state,
+        &args.candidates_file,
+        &args.prefs_file,
+        &args.state,
         num_candidates,
         &[],
         &mut mungers[..],
     )?;
-
-    println!("Yikes: {:#?}", mungers);
 
     println!("=== Elected ===");
     for &(ref c, ref votes) in &election_result.senators {

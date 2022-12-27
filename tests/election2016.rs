@@ -42,3 +42,16 @@ fn nsw_2016_election() {
         assert_eq!(obs_count, &Int::from(*exp_count));
     }
 }
+
+#[test]
+#[ignore]
+fn nsw_2016_election_with_exclusions() {
+    let num_senators = 12;
+    let result = election2016::run(
+        "data/candidate_ordering.csv",
+        "data/NSW.csv",
+        "NSW",
+        num_senators,
+    )
+    .unwrap();
+}
